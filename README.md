@@ -51,7 +51,7 @@ The home is a single tablet, but the family lives on their phones — so FamilyH
 - **Vitest** + **Playwright** — 1,100+ unit/integration tests plus E2E that runs against the **real backend**, not mocks.
 - **PWA** via `vite-plugin-pwa`; automated semver with release-please; CI builds and tests on every push.
 
-Pairs with [`family-hub-api`](https://github.com/joe-bor/family-hub-api) — Spring Boot, Java 21, PostgreSQL. This checkout uses backend **v1.9.0** contracts. See [CLAUDE.md](CLAUDE.md) for the deep dive on architecture, state management, testing strategy, and conventions.
+Pairs with [our `family-hub-api` fork](https://github.com/thehallifax/family-hub-api) — Spring Boot, Java 21, PostgreSQL, based on upstream v1.9.0. Keep it as a sibling checkout for Compose builds; see [household deployment](docs/HOUSEHOLD-DEPLOYMENT.md). See [CLAUDE.md](CLAUDE.md) for the deep dive on architecture, state management, testing strategy, and conventions.
 
 ## Getting started
 
@@ -62,7 +62,7 @@ npm install
 npm run dev      # http://localhost:5173
 ```
 
-The app talks to a live `family-hub-api`. By default the Vite dev server proxies `/api/*` to `http://localhost:8080` — see [`family-hub-api`](https://github.com/joe-bor/family-hub-api) to run the backend locally.
+The app talks to a live `family-hub-api`. By default the Vite dev server proxies `/api/*` to `http://localhost:8080` — see [our backend fork](https://github.com/thehallifax/family-hub-api) to run the backend locally.
 
 ```bash
 npm test              # Vitest (watch mode)

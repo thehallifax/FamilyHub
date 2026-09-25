@@ -22,8 +22,11 @@ export function GoogleCalendarSection({
   memberEmail,
   memberName,
 }: GoogleCalendarSectionProps) {
-  const { data: statusResponse, isLoading } =
-    useGoogleConnectionStatus(memberId);
+  const {
+    data: statusResponse,
+    isLoading,
+    isError,
+  } = useGoogleConnectionStatus(memberId);
   const syncMutation = useSyncGoogleCalendar();
   const disconnectMutation = useDisconnectGoogle();
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
@@ -31,9 +34,11 @@ export function GoogleCalendarSection({
 
   const status = statusResponse?.data;
   const isConnected = status?.connected ?? false;
+  const isConfigured = status?.configured === true;
   const isSyncing = syncMutation.isPending;
 
   const handleConnect = async () => {
+    if (!isConfigured || !memberEmail) return;
     try {
       const response = await googleCalendarService.getAuthUrl(memberId);
       sessionStorage.setItem(
@@ -109,12 +114,20 @@ export function GoogleCalendarSection({
     <div className="space-y-3">
       <p className="text-sm font-medium">Google Calendar</p>
 
+      {!isConfigured && (
+        <p className="text-xs text-muted-foreground">
+          {isError
+            ? "Google Calendar availability could not be checked. Please try again later."
+            : "Google Calendar integration is not configured on this server."}
+        </p>
+      )}
+
       {!isConnected ? (
         <div className="space-y-2">
           <Button
             type="button"
             onClick={handleConnect}
-            disabled={!memberEmail}
+            disabled={!memberEmail || !isConfigured}
             className="w-full"
           >
             Connect Google Calendar

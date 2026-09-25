@@ -1,10 +1,27 @@
 # Household deployment (LAN HTTPS and loopback staging)
 
 The default production stack runs the built FamilyHub PWA and a reverse proxy
-in one Caddy container, the published `family-hub-api` image in a second
+in one Caddy container, our owned `family-hub-api` source build in a second
 container, and PostgreSQL in a third. Only HTTPS port 443 is published, bound
 to one configured LAN IPv4 address. The backend and database have no published
 ports. Do not add a router port forward or expose this stack to the Internet.
+The two repositories remain separate, normally as sibling directories:
+`FamilyHub/` and `family-hub-api/`. Docker builds both images; Java and Maven
+are not required on the host.
+
+Obtain the backend from our fork (the `upstream` remote is for reviewing
+upstream changes, not for deployment):
+
+```sh
+cd /path/containing
+git clone https://github.com/thehallifax/family-hub-api.git
+git -C family-hub-api remote add upstream https://github.com/joe-bor/family-hub-api.git
+```
+
+If the backend checkout already exists, use it; do not clone over it. For
+local staging with the current uncommitted Milestone 2B work, the backend
+checkout must be the sibling `../family-hub-api`. The base Compose file
+resolves that path from the frontend repository.
 
 ## MacBook local staging (HTTP, loopback only)
 
@@ -51,15 +68,19 @@ Caddyfile and LAN-address port 443 binding remain unchanged.
 
 | Component | Pin | Update in |
 | --- | --- | --- |
-| Frontend source/image | v0.3.26, commit `6e685646675bb4eea8d139fa96db8f66cc834449`, local image `familyhub-frontend:0.3.26-6e68564` | Git checkout, `compose.yaml`, and this table |
-| Backend | `ghcr.io/joe-bor/family-hub-api:1.9.0` plus image digest | `compose.yaml` |
+| Frontend source/image | Current FamilyHub checkout; local image `familyhub-frontend:${FAMILYHUB_FRONTEND_IMAGE_TAG:-dev}` | Git checkout and `.env` |
+| Backend source/image | Our fork, based on upstream `v1.9.0` (`70efbf4e51fba2d396c41fb1cfaef657d6dc2126`); local image `familyhub-backend:${FAMILYHUB_BACKEND_IMAGE_TAG:-dev}` | Backend Git checkout and `.env` |
 | PostgreSQL | `16.15-alpine` (major 16) plus image digest | `compose.yaml` |
 | Frontend build | Node `22.23.3-bookworm-slim` plus image digest | `Dockerfile` |
 | Static server/proxy | Caddy `2.11.4-alpine` plus image digest | `Dockerfile` |
 
-These are **selected pins**, not a claim that this entire combination has been
-runtime-tested on your machines. Run the acceptance checks below before using
-household data. PostgreSQL major 16 is also used by the backend's PostgreSQL
+The current `dev` backend tag is for staging only: it is **not** a reproducible
+production pin while the Milestone 2B changes are uncommitted. Before Mac mini
+deployment, commit/review the two repositories in a separate authorized step,
+record both exact commits, check out those commits, and set
+`FAMILYHUB_BACKEND_IMAGE_TAG` to the approved backend commit's short SHA. Do
+not use a mutable branch as the production version. Run the acceptance checks
+below before using household data. PostgreSQL major 16 is also used by the backend's PostgreSQL
 Testcontainers tests. Never point this frontend checkout at backend 1.6.0: the
 frontend uses list categories, meal-plan batch save, and bulk list append added
 in backend 1.7.0, 1.8.0, and 1.9.0 respectively.
@@ -68,10 +89,11 @@ in backend 1.7.0, 1.8.0, and 1.9.0 respectively.
 
 - Docker with the Compose plugin, enough free disk for database growth and
   backups, and a reserved LAN IPv4 address for this host.
-- On the 2014 Mac mini, confirm that its macOS and Docker installation can run
-  the stack before moving household data. The backend image is `linux/amd64`.
-- Keep the MacBook's repository and tooling on the MacBook. The Mac mini needs
-  only Docker, this deployment checkout/build context, `.env`, and restored data.
+- On the 2014 Intel Mac mini, confirm that its macOS and Docker installation can
+  run the stack before moving household data. Our backend Dockerfile uses
+  Eclipse Temurin Java 21 base images and supports amd64 without emulation.
+- Keep development tooling on the MacBook. The Mac mini needs Docker, pinned
+  checkouts/build contexts of **both** repositories, `.env`, and restored data.
 
 From this repository:
 
@@ -96,6 +118,29 @@ Google tokens cannot be decrypted without it. `JWT_SECRET` must be retained to
 keep existing sessions valid. The Compose frontend build always sets
 `VITE_API_BASE_URL=/api`, so the browser talks to the same origin in either
 mode.
+
+For a future production deployment, first verify that **both** checkouts are
+clean and at the reviewed commits, then use those commits to tag the locally
+built images. Example (after the Milestone 2B changes have been committed by
+the owner):
+
+```sh
+git -C /path/containing/FamilyHub status --short
+git -C /path/containing/family-hub-api status --short
+git -C /path/containing/FamilyHub switch --detach APPROVED_FRONTEND_COMMIT
+git -C /path/containing/family-hub-api switch --detach APPROVED_BACKEND_COMMIT
+cd /path/containing/FamilyHub
+FAMILYHUB_FRONTEND_IMAGE_TAG=$(git rev-parse --short=12 HEAD) FAMILYHUB_BACKEND_IMAGE_TAG=$(git -C ../family-hub-api rev-parse --short=12 HEAD) docker compose -f compose.yaml up -d --build --wait
+```
+
+The approved commit placeholders must be replaced with actual reviewed SHAs;
+there is no Milestone 2B release SHA yet. Never update the backend without a
+database backup and restore rehearsal. `FAMILYHUB_BACKEND_CONTEXT` may point
+to a different backend checkout path; it must be a trusted, pinned checkout.
+The backend Dockerfile pins reviewed multi-architecture Java 21 build/runtime
+base-image digests. Record the built image IDs for rollback as well; Maven
+dependencies remain fixed by the backend POM, but external repositories and
+build tooling should still be treated as supply-chain inputs.
 
 ```sh
 docker compose -f compose.yaml config --quiet
@@ -226,12 +271,18 @@ upload store in this milestone; recipe and avatar images are external URLs.
 ## Updates, rollback, and host migration
 
 Before an update, take a backup and run a restore rehearsal. Record the old
-frontend commit, backend/PG/Caddy/Node image pins, `.env`, and current Flyway
-version. Update pins in `compose.yaml` and `Dockerfile`, review upstream
-migrations, run tests on the MacBook, then run `docker compose up -d --build
---wait` and repeat the acceptance checks. A PostgreSQL **major** upgrade needs
+frontend commit, backend commit/image tag, PG/Caddy/Node image pins, `.env`, and
+current Flyway version. Review upstream migrations, test both checkouts on the
+MacBook, then build the approved pinned versions and repeat the acceptance
+checks. A PostgreSQL **major** upgrade needs
 `pg_upgrade` or dump/restore into a new volume; changing the image tag alone
 is unsafe.
+
+Backend Flyway V18 replaces the global Google event-ID index with a
+synced-calendar-scoped unique index. It preserves all existing rows and leaves
+legacy Google rows without a synced-calendar ID unassigned; their source
+calendar cannot be inferred safely. If such rows exist, review them after a
+backup before enabling Google sync, since a later import could show duplicates.
 
 If an update fails after a migration, reverting just the backend image may
 not work. Restore the pre-update backup into a fresh volume and run the prior
@@ -247,14 +298,25 @@ Never copy the live PostgreSQL data directory between running hosts.
 ## Optional Google Calendar
 
 Leave `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` empty in `.env` until you
-choose to enable Google Calendar. Its OAuth client must allow the exact
-redirect URI `https://LAN_IP/api/google/callback`. The Compose stack sets
-`GOOGLE_REDIRECT_URI` to that URI and `GOOGLE_FRONTEND_REDIRECT` to the **plain**
-`https://LAN_IP` origin, without `?googleConnected=true`; the backend appends
-that parameter itself. The browser returns to this LAN callback after Google
-authorization, while the backend makes outbound requests to Google. Check
-whether Google accepts a private-IP redirect URI before enabling the feature.
-Do not enable it as part of this milestone.
+choose to enable Google Calendar. The UI then displays "not configured" and
+the backend rejects direct OAuth-start requests with a structured 400. The
+encryption key remains mandatory for backend startup, including while Google
+is disabled; keep it with backups if Google tokens are ever stored.
+
+For **local-only** OAuth testing, register a Google *web application* OAuth
+client with authorized redirect URI exactly
+`http://localhost:8080/api/google/callback`, set its client ID/secret in the
+local `.env`, and use the local override. `GOOGLE_FRONTEND_REDIRECT` remains the
+plain `http://localhost:8080` origin; the backend adds the outcome query once.
+This Milestone did not verify an actual Google consent/token exchange.
+
+For eventual LAN production, the current raw private-IP callback
+`https://LAN_IP/api/google/callback` should **not** be treated as a usable Google
+web OAuth redirect. A Google-accepted hostname and matching callback design
+must be chosen and registered later. Google can remain disabled until then;
+this milestone does not add remote-access infrastructure. See [Google's web
+OAuth redirect URI validation rules](https://developers.google.com/identity/protocols/oauth2/web-server#uri-validation)
+for the localhost exception and raw-IP restriction.
 
 ## Current limits
 
@@ -262,8 +324,12 @@ Do not enable it as part of this milestone.
   keep copies off-host.
 - Caddy's internal CA requires manual client trust. The Caddy data volume
   contains its private key and should be protected if copied.
-- The backend image is amd64-only; an Apple Silicon development host may
-  emulate it. Performance on the 2014 Mac mini is not yet measured.
+- The backend build uses multi-architecture Java 21 images; performance on the
+  2014 Mac mini is not yet measured.
 - `/api/health` is a liveness endpoint, not a database-readiness probe.
 - The frontend and backend use an existing shared-family JWT login; no auth
   redesign is included here.
+- Frontend CI E2E still uses the latest published **upstream** backend image
+  as a compatibility check. It does not validate this uncommitted backend fork;
+  migrate CI to a pinned fork release/commit before relying on it for fork
+  regression coverage.

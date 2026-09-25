@@ -10,6 +10,7 @@ export interface GoogleCalendarInfo {
 }
 
 export interface GoogleConnectionStatus {
+  configured: boolean;
   connected: boolean;
   calendars: Array<{
     id: string;

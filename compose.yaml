@@ -2,7 +2,7 @@ name: familyhub
 
 services:
   frontend:
-    image: familyhub-frontend:0.3.26-6e68564
+    image: familyhub-frontend:${FAMILYHUB_FRONTEND_IMAGE_TAG:-dev}
     build:
       context: .
       dockerfile: Dockerfile
@@ -27,8 +27,10 @@ services:
       start_period: 15s
 
   backend:
-    image: ghcr.io/joe-bor/family-hub-api:1.9.0@sha256:a8c133e09ccebde33e13e1da9223d21f034aa30bf64f4ec7c0ca3d17e77ef09a
-    platform: linux/amd64
+    image: familyhub-backend:${FAMILYHUB_BACKEND_IMAGE_TAG:-dev}
+    build:
+      context: ${FAMILYHUB_BACKEND_CONTEXT:-../family-hub-api}
+      dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod

@@ -2240,7 +2240,7 @@ export const handlers = [
   // GET /google/status/:memberId - Connection status (default: disconnected)
   http.get(`${API_BASE}/google/status/:memberId`, () => {
     return HttpResponse.json(
-      createApiResponse({ connected: false, calendars: [] }),
+      createApiResponse({ configured: false, connected: false, calendars: [] }),
     );
   }),
 

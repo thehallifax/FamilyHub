@@ -24,7 +24,7 @@ describe("ChoreForm", () => {
     });
   });
 
-  it("submits title, assignee, and cadence", async () => {
+  it("submits a new weekly chore with its selected weekday", async () => {
     const { user } = renderWithUser(
       <ChoreForm
         defaultValues={{
@@ -43,6 +43,7 @@ describe("ChoreForm", () => {
       "Take out trash",
     );
     await user.click(screen.getByRole("button", { name: "Weekly" }));
+    await user.click(screen.getByRole("button", { name: "Tuesday" }));
     await user.click(screen.getByRole("button", { name: /save chore/i }));
 
     await waitFor(
@@ -51,6 +52,8 @@ describe("ChoreForm", () => {
           title: "Take out trash",
           assignedToMemberId: "member-1",
           cadence: "WEEKLY",
+          dueWeekday: "TUESDAY",
+          dueDayOfMonth: null,
         });
       },
       { timeout: TEST_TIMEOUTS.FORM_SUBMIT },
@@ -66,6 +69,32 @@ describe("ChoreForm", () => {
 
     expect(screen.getByText("Chore name is required")).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("saves a new daily chore without a schedule selector", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        defaultValues={{
+          title: "Dishes",
+          assignedToMemberId: "member-1",
+          cadence: "DAILY",
+        }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+    expect(screen.queryByText("Due day")).not.toBeInTheDocument();
+    expect(screen.queryByText("Due day of month")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cadence: "DAILY",
+          dueWeekday: null,
+          dueDayOfMonth: null,
+        }),
+      ),
+    );
   });
 
   it("preserves entered values when equivalent defaults rerender", async () => {
@@ -103,5 +132,208 @@ describe("ChoreForm", () => {
     await user.click(screen.getByRole("button", { name: /cancel/i }));
 
     expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it("requires a weekday for new weekly chores and offers no any-day option", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        defaultValues={{
+          title: "Bins",
+          assignedToMemberId: "member-1",
+          cadence: "WEEKLY",
+        }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+    expect(screen.queryByText(/Any day this week/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Choose a weekday",
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Tuesday" }));
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dueWeekday: "TUESDAY" }),
+      ),
+    );
+  });
+
+  it("requires a numbered day for new monthly chores and offers no any-day option", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        defaultValues={{
+          title: "Sheets",
+          assignedToMemberId: "member-1",
+          cadence: "MONTHLY",
+        }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+    expect(screen.queryByText(/Any day this month/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Choose a day of month",
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Day 31" }));
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dueDayOfMonth: 31 }),
+      ),
+    );
+  });
+
+  it("preserves a legacy weekly null on edit and can convert it to scheduled", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        isEditing
+        defaultValues={{
+          title: "Bins",
+          assignedToMemberId: "member-1",
+          cadence: "WEEKLY",
+          dueWeekday: null,
+        }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+    expect(screen.getByText(/Currently: Any day this week/)).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Any day this week" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dueWeekday: null }),
+      ),
+    );
+    onSubmit.mockClear();
+    await user.click(screen.getByRole("button", { name: "Saturday" }));
+    expect(
+      screen.queryByText(/Currently: Any day this week/),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dueWeekday: "SATURDAY" }),
+      ),
+    );
+  });
+
+  it("preserves a legacy monthly null on edit and can convert it to scheduled", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        isEditing
+        defaultValues={{
+          title: "Sheets",
+          assignedToMemberId: "member-1",
+          cadence: "MONTHLY",
+          dueDayOfMonth: null,
+        }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+    expect(screen.getByText(/Currently: Any day this month/)).toBeVisible();
+    expect(
+      screen.queryByRole("button", { name: "Any day this month" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dueDayOfMonth: null }),
+      ),
+    );
+    onSubmit.mockClear();
+    await user.click(screen.getByRole("button", { name: "Day 15" }));
+    expect(
+      screen.queryByText(/Currently: Any day this month/),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dueDayOfMonth: 15 }),
+      ),
+    );
+  });
+
+  it("requires a fresh schedule after changing a legacy chore's cadence", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        isEditing
+        defaultValues={{
+          title: "Bins",
+          assignedToMemberId: "member-1",
+          cadence: "WEEKLY",
+          dueWeekday: null,
+        }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Monthly" }));
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Choose a day of month",
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Weekly" }));
+    expect(
+      screen.queryByText(/Currently: Any day this week/),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Choose a weekday",
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("supports monthly day 31 and clears incompatible schedule on cadence change", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        defaultValues={{
+          title: "Sheets",
+          assignedToMemberId: "member-1",
+          cadence: "MONTHLY",
+          dueDayOfMonth: 15,
+        }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Day 15" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: "Day 15" }).parentElement,
+    ).toHaveClass("grid-cols-5");
+    await user.click(screen.getByRole("button", { name: "Day 31" }));
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ dueDayOfMonth: 31 }),
+      ),
+    );
+    onSubmit.mockClear();
+    await user.click(screen.getByRole("button", { name: "Daily" }));
+    expect(
+      screen.queryByRole("button", { name: "Day 31" }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cadence: "DAILY",
+          dueDayOfMonth: null,
+          dueWeekday: null,
+        }),
+      ),
+    );
   });
 });

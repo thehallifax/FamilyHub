@@ -23,7 +23,7 @@ Built with React 19, designed for our household, and shipped to a $6 droplet tha
 
 - **Calendar** — daily, weekly, monthly, and schedule views, color-coded by member, with recurring, all-day, and multi-day events and full CRUD.
 - **Home organizer** — a calm "what's next" hero, a one-line state line (chores left + tonight's dinner), and a **"since you last opened"** feed so you can see what changed on the shared plan while you were away.
-- **Chores** — daily / weekly / monthly routines per member, with completion tracking and per-person progress.
+- **Chores** — daily / weekly / monthly routines per member, optional weekday or day-of-month due dates, and period-based completion tracking. [Scheduling semantics](docs/CHORES-SCHEDULING.md).
 - **Lists** — shared grocery and to-do checklists.
 - **Meals** — a week-at-a-glance planner across breakfast, lunch, and dinner.
 - **Recipes** — a household recipe library that feeds the meal planner.

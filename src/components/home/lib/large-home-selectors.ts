@@ -1,4 +1,5 @@
 import { addDays, isSameDay, startOfDay } from "date-fns";
+import { choresNeedingAttentionCount } from "@/lib/chore-attention";
 import {
   formatLocalDate,
   getEventKey,
@@ -133,8 +134,12 @@ export function deriveChoresSummary({
     };
   }
 
-  const { total, remaining } = board.today.summary;
-  if (total === 0) {
+  const { total } = board.today.summary;
+  const remaining = choresNeedingAttentionCount(board);
+  if (
+    total + board.thisWeek.summary.total + board.thisMonth.summary.total ===
+    0
+  ) {
     return {
       module: "chores",
       kind: "empty",
@@ -146,7 +151,10 @@ export function deriveChoresSummary({
     return {
       module: "chores",
       kind: "done",
-      label: "Chores done",
+      label:
+        board.thisWeek.summary.remaining + board.thisMonth.summary.remaining > 0
+          ? "Nothing due now"
+          : "Chores done",
       target: { module: "chores" },
     };
   }

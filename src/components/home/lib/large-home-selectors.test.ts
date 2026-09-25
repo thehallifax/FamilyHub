@@ -216,6 +216,83 @@ describe("large home selectors", () => {
     });
   });
 
+  it("surfaces scheduled weekly/monthly work when Today is clear", () => {
+    const board = choresBoard(0, 0);
+    board.thisWeek.summary.total = 2;
+    board.thisMonth.summary.total = 1;
+    board.thisWeek.assignees = [
+      {
+        member: { id: "m1", name: "Pat", color: "coral" },
+        summary: { total: 2, completed: 0, remaining: 2 },
+        chores: [
+          {
+            templateId: "due",
+            title: "Bins",
+            cadence: "WEEKLY",
+            assignedToMemberId: "m1",
+            completed: false,
+            completedAt: null,
+            dueState: "DUE",
+          },
+          {
+            templateId: "later",
+            title: "Vacuum",
+            cadence: "WEEKLY",
+            assignedToMemberId: "m1",
+            completed: false,
+            completedAt: null,
+            dueState: "UPCOMING",
+          },
+        ],
+      },
+    ];
+    board.thisMonth.assignees = [
+      {
+        member: { id: "m1", name: "Pat", color: "coral" },
+        summary: { total: 1, completed: 0, remaining: 1 },
+        chores: [
+          {
+            templateId: "overdue",
+            title: "Sheets",
+            cadence: "MONTHLY",
+            assignedToMemberId: "m1",
+            completed: false,
+            completedAt: null,
+            dueState: "OVERDUE",
+          },
+        ],
+      },
+    ];
+    expect(
+      deriveChoresSummary({ board, isLoading: false, isError: false }),
+    ).toMatchObject({ kind: "remaining", label: "2 chores left" });
+  });
+
+  it("does not call upcoming scheduled chores completed", () => {
+    const board = choresBoard(0, 0);
+    board.thisWeek.summary = { total: 1, completed: 0, remaining: 1 };
+    board.thisWeek.assignees = [
+      {
+        member: { id: "m1", name: "Pat", color: "coral" },
+        summary: { total: 1, completed: 0, remaining: 1 },
+        chores: [
+          {
+            templateId: "later",
+            title: "Vacuum",
+            cadence: "WEEKLY",
+            assignedToMemberId: "m1",
+            completed: false,
+            completedAt: null,
+            dueState: "UPCOMING",
+          },
+        ],
+      },
+    ];
+    expect(
+      deriveChoresSummary({ board, isLoading: false, isError: false }),
+    ).toMatchObject({ kind: "done", label: "Nothing due now" });
+  });
+
   it("derives dinner planned and dinner missing states with a focus target", () => {
     expect(
       deriveMealsSummary({

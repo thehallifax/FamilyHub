@@ -1,4 +1,5 @@
 import { useChoresBoard, useMealsBoard } from "@/api";
+import { choresNeedingAttentionCount } from "@/lib/chore-attention";
 import { formatLocalDate, getWeekStartSunday } from "@/lib/time-utils";
 
 export function useStateLine({ now = new Date() }: { now?: Date } = {}) {
@@ -7,7 +8,10 @@ export function useStateLine({ now = new Date() }: { now?: Date } = {}) {
   const { data: chores } = useChoresBoard();
   const { data: meals } = useMealsBoard(weekStart);
 
-  const choresRemaining = chores?.data?.today.summary.remaining ?? 0;
+  const choresRemaining =
+    chores?.data?.thisWeek && chores?.data?.thisMonth
+      ? choresNeedingAttentionCount(chores.data)
+      : (chores?.data?.today.summary.remaining ?? 0);
 
   const day = meals?.data?.days.find((d) => d.date === todayStr);
   const dinnerTitle =

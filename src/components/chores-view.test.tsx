@@ -312,12 +312,18 @@ describe("ChoresView", () => {
     );
     await user.click(screen.getByRole("button", { name: "Weekly" }));
     await user.click(screen.getByRole("button", { name: /save chore/i }));
+    expect(await screen.findByText("Choose a weekday")).toBeVisible();
+    expect(capturedCreateBody).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Tuesday" }));
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
 
     await waitFor(() => {
       expect(capturedCreateBody).toEqual({
         title: "Take out trash",
         assignedToMemberId: "leo",
         cadence: "WEEKLY",
+        dueWeekday: "TUESDAY",
+        dueDayOfMonth: null,
         activeFrom: "2026-05-17",
       });
     });
@@ -501,6 +507,70 @@ describe("ChoresView", () => {
     await waitFor(() => {
       expect(capturedUpdateBody).toEqual({ archived: true });
     });
+  });
+
+  it("shows due scheduled work on mobile Today and opens its weekly scope", async () => {
+    viewport.isMobile = true;
+    const board = sampleChoresBoard();
+    board.thisWeek.assignees[0].chores[0] = {
+      ...board.thisWeek.assignees[0].chores[0],
+      dueWeekday: "TUESDAY",
+      dueDate: "2026-05-19",
+      dueState: "DUE",
+    };
+    seedMockChoresBoard(board);
+    const { user } = renderWithUser(<ChoresView />);
+    const attention = await screen.findByRole("region", {
+      name: "Scheduled chores needing attention",
+    });
+    expect(attention).toHaveTextContent("Take out trash");
+    expect(attention).toHaveTextContent("Due today");
+    await user.click(
+      screen.getByRole("button", { name: /Take out trash Due today/i }),
+    );
+    expect(
+      await screen.findByRole("button", { name: "Edit Take out trash" }),
+    ).toBeVisible();
+  });
+
+  it("edits a legacy weekly chore without inventing a due day", async () => {
+    let updated: UpdateChoreTemplateRequest | null = null;
+    server.use(
+      http.patch(
+        `${API_BASE}/chores/templates/trash-id`,
+        async ({ request }) => {
+          updated = (await request.json()) as UpdateChoreTemplateRequest;
+          return HttpResponse.json({
+            data: {
+              id: "trash-id",
+              title: updated.title,
+              assignedToMemberId: updated.assignedToMemberId,
+              cadence: updated.cadence,
+              activeFrom: "2026-05-17",
+              archived: false,
+              dueWeekday: updated.dueWeekday,
+              dueDayOfMonth: updated.dueDayOfMonth,
+              createdAt: "2026-05-17T08:00:00Z",
+              updatedAt: "2026-05-17T09:00:00Z",
+            },
+          });
+        },
+      ),
+    );
+    seedMockChoresBoard(sampleChoresBoard());
+    const { user } = renderWithUser(<ChoresView />);
+    await user.click(
+      await screen.findByRole("button", { name: "Edit Take out trash" }),
+    );
+    expect(screen.getByText(/Currently: Any day this week/)).toBeVisible();
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(updated).toMatchObject({
+        cadence: "WEEKLY",
+        dueWeekday: null,
+        dueDayOfMonth: null,
+      }),
+    );
   });
 
   describe("ChoresView large screen (full-height board)", () => {

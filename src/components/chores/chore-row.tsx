@@ -1,6 +1,8 @@
-import { Archive, Check, Circle } from "lucide-react";
+import { format } from "date-fns";
+import { Archive, Check, Circle, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { haptics } from "@/lib/haptics";
+import { parseLocalDate } from "@/lib/time-utils";
 import type { ChoreBoardItem, ChoreCadence, ChoreScope } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +12,7 @@ interface ChoreRowProps {
    * redundant (e.g. "Daily" inside the Today column) and is suppressed. */
   activeScope?: ChoreScope;
   onArchive?: () => void;
+  onEdit?: () => void;
   onComplete?: () => void;
   onUncomplete?: () => void;
 }
@@ -26,14 +29,34 @@ const IMPLIED_BY: Record<ChoreCadence, ChoreScope> = {
   MONTHLY: "THIS_MONTH",
 };
 
+export function choreDueLabel(chore: ChoreBoardItem): string | null {
+  if (chore.completed) return "Completed";
+  if (chore.dueState === "UNSCHEDULED" || !chore.dueState) {
+    if (chore.cadence === "WEEKLY") return "Any day this week";
+    if (chore.cadence === "MONTHLY") return "Any day this month";
+    return null;
+  }
+  if (chore.dueState === "DUE") return "Due today";
+  const day =
+    chore.cadence === "WEEKLY" && chore.dueWeekday
+      ? chore.dueWeekday.charAt(0) + chore.dueWeekday.slice(1).toLowerCase()
+      : chore.dueDate
+        ? format(parseLocalDate(chore.dueDate), "MMM d")
+        : "soon";
+  if (chore.dueState === "OVERDUE") return `Overdue · ${day}`;
+  return `Due ${day}`;
+}
+
 export function ChoreRow({
   chore,
   activeScope,
   onArchive,
+  onEdit,
   onComplete,
   onUncomplete,
 }: ChoreRowProps) {
   const showCadence = IMPLIED_BY[chore.cadence] !== activeScope;
+  const dueLabel = choreDueLabel(chore);
 
   // Shared by the checkoff and the row-body button below, so both stay on the
   // same haptics path (success() on the completing transition only).
@@ -112,9 +135,33 @@ export function ChoreRow({
               {cadenceLabel(chore.cadence)}
             </span>
           )}
+          {dueLabel && (
+            <span
+              className={cn(
+                "mt-1 text-xs font-medium",
+                chore.dueState === "OVERDUE"
+                  ? "text-destructive"
+                  : "text-muted-foreground",
+              )}
+            >
+              {dueLabel}
+            </span>
+          )}
         </span>
       </button>
 
+      {onEdit && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-lg"
+          aria-label={`Edit ${chore.title}`}
+          onClick={onEdit}
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+      )}
       <Button
         type="button"
         variant="ghost"

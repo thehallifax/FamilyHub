@@ -144,6 +144,15 @@ function applyOptimisticCompletion(
   const optimisticItem: ChoreBoardItem = {
     ...existing,
     completed,
+    dueState: completed
+      ? "COMPLETE"
+      : existing.dueDate
+        ? board.today.periodStartDate < existing.dueDate
+          ? "UPCOMING"
+          : board.today.periodStartDate > existing.dueDate
+            ? "OVERDUE"
+            : "DUE"
+        : "UNSCHEDULED",
     // completedAt is an instant, not a calendar date, so toISOString() is
     // correct here; the server overwrites it with the canonical value on success.
     completedAt: completed
@@ -179,6 +188,8 @@ export function useChoresBoard(
     queryKey: choreKeys.board(),
     queryFn: () => choreService.getBoard(),
     staleTime: 5 * 60 * 1000,
+    // A kitchen PWA can remain open across local midnight or a due-day boundary.
+    refetchInterval: 60_000,
     ...options,
   });
 }

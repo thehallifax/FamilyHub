@@ -12,6 +12,7 @@ interface ChoreScopeColumnProps {
   /** Additional classes for sizing or positioning the section. */
   className?: string;
   onArchive?: (scope: ChoreScopeBoard, chore: ChoreBoardItem) => void;
+  onEdit?: (scope: ChoreScopeBoard, chore: ChoreBoardItem) => void;
   onComplete?: (scope: ChoreScopeBoard, chore: ChoreBoardItem) => void;
   onUncomplete?: (scope: ChoreScopeBoard, chore: ChoreBoardItem) => void;
 }
@@ -29,6 +30,7 @@ export function ChoreScopeColumn({
   emphasis = false,
   className,
   onArchive,
+  onEdit,
   onComplete,
   onUncomplete,
 }: ChoreScopeColumnProps) {
@@ -76,6 +78,7 @@ export function ChoreScopeColumn({
             group={group}
             activeScope={scope.scope}
             onArchive={(chore) => onArchive?.(scope, chore)}
+            onEdit={onEdit ? (chore) => onEdit(scope, chore) : undefined}
             onComplete={(chore) => onComplete?.(scope, chore)}
             onUncomplete={(chore) => onUncomplete?.(scope, chore)}
           />

@@ -10,6 +10,7 @@ import {
   useUpdateChoreTemplate,
 } from "@/api";
 import { ChoreFormSheet } from "@/components/chores/chore-form-sheet";
+import { choreDueLabel } from "@/components/chores/chore-row";
 import { ChoresBoardLarge } from "@/components/chores/chores-board-large";
 import { ChoreScopeColumn } from "@/components/chores/chores-scope-column";
 import {
@@ -24,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toaster";
 import { useIsLargeScreen, useIsMobile } from "@/hooks";
+import { scheduledChoresNeedingAttention } from "@/lib/chore-attention";
 import type { ChoreBoardItem, ChoreScopeBoard, ChoresBoard } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { ChoreFormData } from "@/lib/validations";
@@ -56,11 +58,14 @@ export function ChoresView() {
   const [selectedScopeKey, setSelectedScopeKey] =
     useState<ChoreScopeKey>("today");
   const [isCreateOpen, setCreateOpen] = useState(false);
+  const [editingChore, setEditingChore] = useState<ChoreBoardItem | null>(null);
   const { data, isError, isLoading } = useChoresBoard();
   const createTemplate = useCreateChoreTemplate({
     onSuccess: () => setCreateOpen(false),
   });
-  const updateTemplate = useUpdateChoreTemplate();
+  const updateTemplate = useUpdateChoreTemplate({
+    onSuccess: () => setEditingChore(null),
+  });
   const completeCurrentPeriod = useCompleteChoreForCurrentPeriod({
     onError: showStalePeriodRecovery,
   });
@@ -76,14 +81,30 @@ export function ChoresView() {
     : [];
   const activeFrom = board?.today.periodStartDate;
   const canCreate = Boolean(activeFrom) && !isLoading && !isError;
+  const needsAttention = board ? scheduledChoresNeedingAttention(board) : [];
 
-  const handleCreate = (values: ChoreFormData) => {
+  const handleSave = (values: ChoreFormData) => {
+    if (editingChore) {
+      updateTemplate.mutate({
+        id: editingChore.templateId,
+        request: {
+          title: values.title,
+          assignedToMemberId: values.assignedToMemberId,
+          cadence: values.cadence,
+          dueWeekday: values.dueWeekday ?? null,
+          dueDayOfMonth: values.dueDayOfMonth ?? null,
+        },
+      });
+      return;
+    }
     if (!activeFrom) return;
 
     createTemplate.mutate({
       title: values.title,
       assignedToMemberId: values.assignedToMemberId,
       cadence: values.cadence,
+      dueWeekday: values.dueWeekday ?? null,
+      dueDayOfMonth: values.dueDayOfMonth ?? null,
       activeFrom,
     });
   };
@@ -190,6 +211,36 @@ export function ChoresView() {
             </div>
           )}
 
+          {needsAttention.length > 0 && (
+            <section
+              aria-label="Scheduled chores needing attention"
+              className="mb-4 shrink-0 rounded-lg border border-primary/30 bg-primary/5 p-3"
+            >
+              <h2 className="mb-2 text-sm font-semibold text-foreground">
+                Needs attention
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                {needsAttention.map((chore) => (
+                  <button
+                    key={chore.templateId}
+                    type="button"
+                    onClick={() =>
+                      setSelectedScopeKey(
+                        chore.cadence === "WEEKLY" ? "thisWeek" : "thisMonth",
+                      )
+                    }
+                    className="min-h-11 rounded-lg border border-border bg-card px-3 py-2 text-left text-sm hover:border-primary"
+                  >
+                    <span className="font-medium">{chore.title}</span>
+                    <span className="ml-2 text-muted-foreground">
+                      {choreDueLabel(chore)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
           {!isLoading &&
             !isError &&
             board &&
@@ -200,6 +251,7 @@ export function ChoresView() {
                 thisWeek={board.thisWeek}
                 thisMonth={board.thisMonth}
                 onArchive={handleArchive}
+                onEdit={(_scope, chore) => setEditingChore(chore)}
                 onComplete={handleComplete}
                 onUncomplete={handleUncomplete}
               />
@@ -211,6 +263,7 @@ export function ChoresView() {
                     scope={scope}
                     showHeading={!isMobile}
                     onArchive={handleArchive}
+                    onEdit={(_scope, chore) => setEditingChore(chore)}
                     onComplete={handleComplete}
                     onUncomplete={handleUncomplete}
                   />
@@ -221,10 +274,27 @@ export function ChoresView() {
       </div>
 
       <ChoreFormSheet
-        isOpen={isCreateOpen}
-        onClose={() => setCreateOpen(false)}
-        isPending={createTemplate.isPending}
-        onSubmit={handleCreate}
+        key={editingChore?.templateId ?? "create"}
+        isOpen={isCreateOpen || editingChore !== null}
+        onClose={() => {
+          setCreateOpen(false);
+          setEditingChore(null);
+        }}
+        isPending={createTemplate.isPending || updateTemplate.isPending}
+        onSubmit={handleSave}
+        title={editingChore ? "Edit Chore" : "New Chore"}
+        isEditing={editingChore !== null}
+        defaultValues={
+          editingChore
+            ? {
+                title: editingChore.title,
+                assignedToMemberId: editingChore.assignedToMemberId,
+                cadence: editingChore.cadence,
+                dueWeekday: editingChore.dueWeekday ?? null,
+                dueDayOfMonth: editingChore.dueDayOfMonth ?? null,
+              }
+            : undefined
+        }
       />
 
       {isMobile && (

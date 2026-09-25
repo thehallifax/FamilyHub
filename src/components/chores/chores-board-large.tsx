@@ -6,6 +6,7 @@ interface ChoresBoardLargeProps {
   thisWeek: ChoreScopeBoard;
   thisMonth: ChoreScopeBoard;
   onArchive?: (scope: ChoreScopeBoard, chore: ChoreBoardItem) => void;
+  onEdit?: (scope: ChoreScopeBoard, chore: ChoreBoardItem) => void;
   onComplete?: (scope: ChoreScopeBoard, chore: ChoreBoardItem) => void;
   onUncomplete?: (scope: ChoreScopeBoard, chore: ChoreBoardItem) => void;
 }
@@ -15,6 +16,7 @@ export function ChoresBoardLarge({
   thisWeek,
   thisMonth,
   onArchive,
+  onEdit,
   onComplete,
   onUncomplete,
 }: ChoresBoardLargeProps) {
@@ -22,6 +24,7 @@ export function ChoresBoardLarge({
     fillHeight: true as const,
     showHeading: true as const,
     onArchive,
+    onEdit,
     onComplete,
     onUncomplete,
   };

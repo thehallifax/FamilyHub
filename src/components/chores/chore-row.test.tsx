@@ -100,6 +100,42 @@ it("keeps Archive separate from the row-body target", async () => {
   expect(onComplete).not.toHaveBeenCalled();
 });
 
+it("shows authoritative upcoming, due, overdue and completed schedule states", () => {
+  const chore = {
+    ...baseChore,
+    cadence: "WEEKLY" as const,
+    dueWeekday: "TUESDAY" as const,
+    dueDate: "2026-05-19",
+    dueState: "UPCOMING" as const,
+  };
+  const { rerender } = render(<ChoreRow chore={chore} />);
+  expect(screen.getByText("Due Tuesday")).toBeVisible();
+  rerender(<ChoreRow chore={{ ...chore, dueState: "DUE" }} />);
+  expect(screen.getByText("Due today")).toBeVisible();
+  rerender(<ChoreRow chore={{ ...chore, dueState: "OVERDUE" }} />);
+  expect(screen.getByText("Overdue · Tuesday")).toBeVisible();
+  rerender(
+    <ChoreRow chore={{ ...chore, dueState: "COMPLETE", completed: true }} />,
+  );
+  expect(screen.getByText("Completed")).toBeVisible();
+});
+
+it("keeps edit separate from completion and preserves legacy any-day labels", async () => {
+  const onEdit = vi.fn();
+  const onComplete = vi.fn();
+  render(
+    <ChoreRow
+      chore={{ ...baseChore, cadence: "MONTHLY" }}
+      onEdit={onEdit}
+      onComplete={onComplete}
+    />,
+  );
+  expect(screen.getByText("Any day this month")).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Edit Dishes" }));
+  expect(onEdit).toHaveBeenCalledOnce();
+  expect(onComplete).not.toHaveBeenCalled();
+});
+
 describe("ChoreRow cadence label", () => {
   it("hides the cadence label when the active scope already implies it", () => {
     render(

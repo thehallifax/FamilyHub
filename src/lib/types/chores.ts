@@ -2,6 +2,20 @@ import type { FamilyColor } from "./family";
 
 export type ChoreCadence = "DAILY" | "WEEKLY" | "MONTHLY";
 export type ChoreScope = "TODAY" | "THIS_WEEK" | "THIS_MONTH";
+export type ChoreWeekday =
+  | "SUNDAY"
+  | "MONDAY"
+  | "TUESDAY"
+  | "WEDNESDAY"
+  | "THURSDAY"
+  | "FRIDAY"
+  | "SATURDAY";
+export type ChoreDueState =
+  | "UNSCHEDULED"
+  | "UPCOMING"
+  | "DUE"
+  | "OVERDUE"
+  | "COMPLETE";
 
 export interface ChoreBoardItem {
   templateId: string;
@@ -10,6 +24,10 @@ export interface ChoreBoardItem {
   assignedToMemberId: string;
   completed: boolean;
   completedAt: string | null;
+  dueWeekday?: ChoreWeekday | null;
+  dueDayOfMonth?: number | null;
+  dueDate?: string | null;
+  dueState?: ChoreDueState;
 }
 
 export interface ChoreAssigneeGroup {
@@ -50,6 +68,8 @@ export interface CreateChoreTemplateRequest {
   assignedToMemberId: string;
   cadence: ChoreCadence;
   activeFrom: string;
+  dueWeekday?: ChoreWeekday | null;
+  dueDayOfMonth?: number | null;
 }
 
 export interface UpdateChoreTemplateRequest {
@@ -58,6 +78,8 @@ export interface UpdateChoreTemplateRequest {
   cadence?: ChoreCadence;
   activeFrom?: string;
   archived?: boolean;
+  dueWeekday?: ChoreWeekday | null;
+  dueDayOfMonth?: number | null;
 }
 
 export interface ChoreTemplate {
@@ -69,6 +91,8 @@ export interface ChoreTemplate {
   archived: boolean;
   createdAt: string;
   updatedAt: string;
+  dueWeekday?: ChoreWeekday | null;
+  dueDayOfMonth?: number | null;
 }
 
 export interface UpdateCurrentPeriodCompletionRequest {

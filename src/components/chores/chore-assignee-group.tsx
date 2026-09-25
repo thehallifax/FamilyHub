@@ -12,6 +12,7 @@ interface ChoreAssigneeGroupProps {
   /** Forwarded to each row so a cadence the scope already implies is suppressed. */
   activeScope?: ChoreScope;
   onArchive?: (chore: ChoreBoardItem) => void;
+  onEdit?: (chore: ChoreBoardItem) => void;
   onComplete?: (chore: ChoreBoardItem) => void;
   onUncomplete?: (chore: ChoreBoardItem) => void;
 }
@@ -20,6 +21,7 @@ export function ChoreAssigneeGroup({
   group,
   activeScope,
   onArchive,
+  onEdit,
   onComplete,
   onUncomplete,
 }: ChoreAssigneeGroupProps) {
@@ -75,6 +77,7 @@ export function ChoreAssigneeGroup({
             chore={chore}
             activeScope={activeScope}
             onArchive={() => onArchive?.(chore)}
+            onEdit={onEdit ? () => onEdit(chore) : undefined}
             onComplete={() => onComplete?.(chore)}
             onUncomplete={() => onUncomplete?.(chore)}
           />

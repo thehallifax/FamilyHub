@@ -83,4 +83,34 @@ describe("useStateLine", () => {
     expect(result.current.dinnerTitle).toBeNull();
     expect(result.current.isEmpty).toBe(true);
   });
+
+  it("includes due and overdue scheduled chores but excludes upcoming ones", () => {
+    choresResult = {
+      data: {
+        data: {
+          today: { summary: { remaining: 1 } },
+          thisWeek: {
+            assignees: [
+              {
+                chores: [
+                  { dueState: "DUE", completed: false },
+                  { dueState: "UPCOMING", completed: false },
+                ],
+              },
+            ],
+          },
+          thisMonth: {
+            assignees: [
+              { chores: [{ dueState: "OVERDUE", completed: false }] },
+            ],
+          },
+        },
+      },
+    };
+    mealsResult = emptyMeals;
+    const { result } = renderHook(() =>
+      useStateLine({ now: new Date(2026, 5, 21) }),
+    );
+    expect(result.current.choresRemaining).toBe(3);
+  });
 });

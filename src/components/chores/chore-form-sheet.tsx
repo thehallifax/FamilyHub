@@ -8,6 +8,8 @@ interface ChoreFormSheetProps {
   onSubmit: (data: ChoreFormData) => void;
   isPending?: boolean;
   defaultValues?: Partial<ChoreFormInput>;
+  title?: string;
+  isEditing?: boolean;
 }
 
 export function ChoreFormSheet({
@@ -16,16 +18,19 @@ export function ChoreFormSheet({
   onSubmit,
   isPending = false,
   defaultValues,
+  title = "New Chore",
+  isEditing = false,
 }: ChoreFormSheetProps) {
   return (
     <MobileSheet
       isOpen={isOpen}
       onClose={onClose}
-      title="New Chore"
-      initialHeight="half"
+      title={title}
+      initialHeight="full"
     >
       <ChoreForm
         defaultValues={defaultValues}
+        isEditing={isEditing}
         onSubmit={onSubmit}
         onCancel={onClose}
         isPending={isPending}

@@ -151,6 +151,85 @@ test.describe("Large-screen Meals", () => {
     await clearStorage(page);
   });
 
+  test("drags a meal within the visible week and confirms Move", async ({
+    page,
+    request,
+  }) => {
+    // The backend rejects edits to past weeks; use the real current week for
+    // this mutation test, not the geometry suite's fixed historical date.
+    const testNow = new Date();
+    await page.clock.setFixedTime(testNow);
+    if (process.env.E2E_APP_ORIGIN) {
+      await page.goto(process.env.E2E_APP_ORIGIN);
+    }
+    const weekStartDate = formatLocalDate(getWeekStartSunday(testNow));
+    const registration = await registerFamily(request, {
+      familyName: "Meals Drag Move",
+      members: [{ name: "Sam", color: "teal" }],
+    });
+    await upsertMealSlot(request, registration.token, {
+      weekStartDate,
+      dayIndex: 0,
+      mealType: "dinner",
+      primary: {
+        sourceType: "quick",
+        recipeId: null,
+        title: "Drag Pasta",
+        imageUrl: null,
+        note: null,
+      },
+      extras: [],
+      note: null,
+      collisionMode: null,
+    });
+    await authenticateAndOpenMeals(page, registration);
+    const table = page.getByRole("table", { name: "Weekly meals" });
+    const source = table.getByRole("button", {
+      name: "Open dinner, Sunday: Drag Pasta",
+    });
+    const destination = table.getByRole("button", {
+      name: "Add dinner meal, Monday",
+    });
+    const sourceBox = await source.boundingBox();
+    const destinationBox = await destination.boundingBox();
+    expect(sourceBox).not.toBeNull();
+    expect(destinationBox).not.toBeNull();
+    await page.mouse.move(
+      sourceBox!.x + sourceBox!.width / 2,
+      sourceBox!.y + sourceBox!.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      destinationBox!.x + destinationBox!.width / 2,
+      destinationBox!.y + destinationBox!.height / 2,
+      { steps: 12 },
+    );
+    await page.mouse.up();
+    await expect(
+      page.getByRole("dialog", { name: "Move or copy meal?" }),
+    ).toBeVisible();
+    await expect(
+      page.locator(
+        '[role="table"] [aria-label="Open dinner, Sunday: Drag Pasta"]',
+      ),
+    ).toHaveCount(1); // no mutation on drop alone
+    const moveResponse = page.waitForResponse((response) =>
+      response.url().includes("/api/meals/slots/move"),
+    );
+    await page
+      .getByRole("dialog", { name: "Move or copy meal?" })
+      .getByRole("button", { name: "Move" })
+      .click();
+    const response = await moveResponse;
+    expect(response.status(), await response.text()).toBe(200);
+    await expect(
+      table.getByRole("button", { name: "Open dinner, Monday: Drag Pasta" }),
+    ).toBeVisible();
+    await expect(
+      table.getByRole("button", { name: "Add dinner meal, Sunday" }),
+    ).toBeVisible();
+  });
+
   test("keeps the current empty week inside the viewport at all accepted widths", async ({
     page,
     request,

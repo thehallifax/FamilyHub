@@ -1,3 +1,4 @@
+import { useDraggable } from "@dnd-kit/core";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 import type { MealSlot } from "@/lib/types";
@@ -18,6 +19,7 @@ interface MealGridCardProps {
   isPlanningTarget?: boolean;
   dayLabel: string;
   onSelectSlot: (slot: MealSlot) => void;
+  dragEnabled?: boolean;
 }
 
 // Grid-only banner card. The mobile day-card layout keeps using MealSlotCard;
@@ -30,7 +32,12 @@ export function MealGridCard({
   isPlanningTarget = false,
   dayLabel,
   onSelectSlot,
+  dragEnabled = false,
 }: MealGridCardProps) {
+  const draggable = useDraggable({
+    id: `meal-source:${slot.dayIndex}:${slot.mealType}`,
+    disabled: !dragEnabled || readOnly || !slot.primary || Boolean(draft),
+  });
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const primary = draft
     ? {
@@ -47,8 +54,13 @@ export function MealGridCard({
     return (
       <button
         type="button"
+        ref={draggable.setNodeRef}
+        {...draggable.listeners}
         className={cn(
           "flex h-full w-full flex-col overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm transition-colors",
+          dragEnabled && slot.primary
+            ? "touch-manipulation cursor-grab active:cursor-grabbing"
+            : null,
           readOnly ? "cursor-default" : "hover:bg-muted/50",
           isPlanningTarget
             ? "border-primary/70 bg-primary/5 ring-2 ring-primary/20"

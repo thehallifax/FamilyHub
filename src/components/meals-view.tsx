@@ -647,6 +647,7 @@ export function MealsView() {
           <MealGrid
             board={displayBoard}
             readOnly={readOnly}
+            dragDisabled={planningActive || Boolean(placementDraft)}
             pendingRecipeId={pendingRecipeId}
             planningDrafts={planningActive ? planningDrafts : []}
             planningTarget={currentPlanningTarget}

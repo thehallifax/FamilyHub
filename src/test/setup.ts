@@ -21,12 +21,12 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
-// Mock ResizeObserver (used by Radix UI primitives)
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-  observe: vi.fn(),
-  unobserve: vi.fn(),
-  disconnect: vi.fn(),
-}));
+// A constructable observer is required by drag sensors as well as Radix.
+global.ResizeObserver = class ResizeObserverMock {
+  observe = vi.fn();
+  unobserve = vi.fn();
+  disconnect = vi.fn();
+};
 
 // Mock IntersectionObserver (used for lazy loading and scroll detection)
 global.IntersectionObserver = vi.fn().mockImplementation(() => ({

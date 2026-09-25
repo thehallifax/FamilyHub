@@ -1,0 +1,86 @@
+name: familyhub
+
+services:
+  frontend:
+    image: familyhub-frontend:0.3.26-6e68564
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}:443:443"
+    environment:
+      FAMILYHUB_LAN_IP: ${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  backend:
+    image: ghcr.io/joe-bor/family-hub-api:1.9.0@sha256:a8c133e09ccebde33e13e1da9223d21f034aa30bf64f4ec7c0ca3d17e77ef09a
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://db:5432/familyhub
+      DB_USERNAME: familyhub
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?Set TOKEN_ENCRYPTION_KEY in .env}
+      CORS_ALLOWED_ORIGINS: https://${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: https://${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}/api/google/callback
+      GOOGLE_FRONTEND_REDIRECT: https://${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app
+      - data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    stop_grace_period: 30s
+
+  db:
+    image: postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: familyhub
+      POSTGRES_USER: familyhub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    stop_grace_period: 60s
+
+networks:
+  app:
+  data:
+    internal: true
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

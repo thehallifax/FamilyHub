@@ -51,7 +51,7 @@ The home is a single tablet, but the family lives on their phones — so FamilyH
 - **Vitest** + **Playwright** — 1,100+ unit/integration tests plus E2E that runs against the **real backend**, not mocks.
 - **PWA** via `vite-plugin-pwa`; automated semver with release-please; CI builds and tests on every push.
 
-Pairs with [`family-hub-api`](https://github.com/joe-bor/family-hub-api) — Spring Boot, Java 21, PostgreSQL — currently **v1.6.0**. See [CLAUDE.md](CLAUDE.md) for the deep dive on architecture, state management, testing strategy, and conventions.
+Pairs with [`family-hub-api`](https://github.com/joe-bor/family-hub-api) — Spring Boot, Java 21, PostgreSQL. This checkout uses backend **v1.9.0** contracts. See [CLAUDE.md](CLAUDE.md) for the deep dive on architecture, state management, testing strategy, and conventions.
 
 ## Getting started
 
@@ -72,7 +72,9 @@ npm run build         # type-check + production build
 
 ## Status
 
-**v0.3.26** — Calendar, Chores, Lists, Meals, and Recipes are integrated with `family-hub-api` v1.6.0. Photos is UI-only for now. <!-- x-release-please-version -->
+**v0.3.26** — Calendar, Chores, Lists, Meals, and Recipes are integrated with `family-hub-api` v1.9.0. Photos is UI-only for now. <!-- x-release-please-version -->
+
+For a pinned LAN deployment with PostgreSQL and an iPad PWA, see the [household deployment guide](docs/HOUSEHOLD-DEPLOYMENT.md).
 
 | Module   | Status          |
 | -------- | --------------- |

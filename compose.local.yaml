@@ -1,0 +1,17 @@
+# MacBook-only HTTP staging. Always layer this on top of compose.yaml; never
+# use it for the LAN/iPad deployment. Requires Docker Compose 2.24.4+.
+services:
+  frontend:
+    ports: !override
+      - "127.0.0.1:8080:80"
+    volumes: !override
+      - ./deploy/Caddyfile.local:/etc/caddy/Caddyfile:ro
+    tmpfs:
+      - /data
+      - /config
+
+  backend:
+    environment:
+      CORS_ALLOWED_ORIGINS: http://localhost:8080
+      GOOGLE_REDIRECT_URI: http://localhost:8080/api/google/callback
+      GOOGLE_FRONTEND_REDIRECT: http://localhost:8080

@@ -1,0 +1,22 @@
+https://{$FAMILYHUB_LAN_IP} {
+	tls internal
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+	}
+
+	@api path /api /api/*
+	handle @api {
+		reverse_proxy backend:8080
+	}
+
+	handle {
+		root * /srv
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}

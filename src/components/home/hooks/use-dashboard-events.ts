@@ -18,6 +18,7 @@ export function useDashboardEvents({
 } = {}) {
   const dayStart = useMemo(() => startOfDay(currentDate), [currentDate]);
   const dayEnd = useMemo(() => endOfDay(dayStart), [dayStart]);
+  const tomorrowStart = useMemo(() => addDays(dayStart, 1), [dayStart]);
   const windowEnd = useMemo(() => endOfDay(addDays(dayStart, 2)), [dayStart]);
   const range = useMemo(
     () => ({
@@ -59,8 +60,17 @@ export function useDashboardEvents({
     [dayEnd, filteredEvents, windowEnd],
   );
 
+  const tomorrow = useMemo(
+    () =>
+      filteredEvents
+        .filter((event) => isEventOnDate(event, tomorrowStart))
+        .sort(compareAllDayFirst),
+    [filteredEvents, tomorrowStart],
+  );
+
   return {
     today,
+    tomorrow,
     comingUp,
     isLoading,
     isError,

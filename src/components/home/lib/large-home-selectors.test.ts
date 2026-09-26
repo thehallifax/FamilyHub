@@ -10,8 +10,8 @@ import {
   deriveListsSummary,
   deriveMealsSummary,
   getTodayDinnerTarget,
+  selectHomeAgendaChores,
   selectRestOfDayItems,
-  selectTomorrowPeek,
 } from "./large-home-selectors";
 
 const now = new Date(2026, 6, 5, 9, 0, 0);
@@ -85,6 +85,84 @@ const mealsBoard = (dinnerTitle: string | null): MealBoard => ({
 });
 
 describe("large home selectors", () => {
+  it("selects only due and overdue chores with authoritative scopes and periods", () => {
+    const board = choresBoard(0, 0);
+    const member = { id: "m1", name: "Pat", color: "coral" as const };
+    board.today.assignees = [
+      {
+        member,
+        summary: { total: 1, completed: 0, remaining: 1 },
+        chores: [
+          {
+            templateId: "daily",
+            title: "Dishes",
+            cadence: "DAILY",
+            assignedToMemberId: "m1",
+            completed: false,
+            completedAt: null,
+            dueState: "DUE",
+          },
+        ],
+      },
+    ];
+    board.thisWeek.assignees = [
+      {
+        member,
+        summary: { total: 2, completed: 0, remaining: 2 },
+        chores: [
+          {
+            templateId: "fortnightly",
+            title: "Bins",
+            cadence: "FORTNIGHTLY",
+            assignedToMemberId: "m1",
+            completed: false,
+            completedAt: null,
+            dueState: "DUE",
+            periodStartDate: "2026-06-28",
+          },
+          {
+            templateId: "upcoming",
+            title: "Vacuum",
+            cadence: "WEEKLY",
+            assignedToMemberId: "m1",
+            completed: false,
+            completedAt: null,
+            dueState: "UPCOMING",
+          },
+        ],
+      },
+    ];
+    board.thisMonth.assignees = [
+      {
+        member,
+        summary: { total: 1, completed: 0, remaining: 1 },
+        chores: [
+          {
+            templateId: "overdue",
+            title: "Sheets",
+            cadence: "MONTHLY",
+            assignedToMemberId: "m1",
+            completed: false,
+            completedAt: null,
+            dueState: "OVERDUE",
+          },
+        ],
+      },
+    ];
+
+    expect(
+      selectHomeAgendaChores(board).map(({ chore, scope, periodStartDate }) => [
+        chore.templateId,
+        scope,
+        periodStartDate,
+      ]),
+    ).toEqual([
+      ["overdue", "THIS_MONTH", "2026-07-01"],
+      ["daily", "TODAY", "2026-07-05"],
+      ["fortnightly", "THIS_WEEK", "2026-06-28"],
+    ]);
+  });
+
   it("selects 3-5 rest-of-day items after excluding the hero event", () => {
     const hero = event({
       id: "hero",
@@ -134,47 +212,6 @@ describe("large home selectors", () => {
     expect(
       selectRestOfDayItems([hero, ...later], hero, now).map((e) => e.title),
     ).toEqual(["Dentist", "Practice", "Pickup", "Dinner", "Bedtime"]);
-  });
-
-  it("selects a small tomorrow/near-future peek", () => {
-    const tomorrow = new Date(2026, 6, 6);
-    const dayAfter = new Date(2026, 6, 7);
-    const peek = selectTomorrowPeek(
-      [
-        event({
-          id: "t1",
-          title: "Camp",
-          date: tomorrow,
-          startTime: "8:00 AM",
-        }),
-        event({
-          id: "t2",
-          title: "Lunch",
-          date: tomorrow,
-          startTime: "12:00 PM",
-        }),
-        event({
-          id: "t3",
-          title: "Dentist",
-          date: tomorrow,
-          startTime: "4:00 PM",
-        }),
-        event({
-          id: "d1",
-          title: "Later",
-          date: dayAfter,
-          startTime: "9:00 AM",
-        }),
-      ],
-      now,
-    );
-
-    expect(peek.items.map((e) => e.title)).toEqual([
-      "Camp",
-      "Lunch",
-      "Dentist",
-    ]);
-    expect(peek.isTomorrow).toBe(true);
   });
 
   it("derives chores remaining, done, empty, and unavailable states", () => {
@@ -413,35 +450,6 @@ describe("large home selectors", () => {
     const result = selectRestOfDayItems([late, allDay, early], null, now);
 
     expect(result.map((e) => e.title)).toEqual(["All Day", "Early", "Late"]);
-  });
-
-  it("falls back to earliest upcoming events when tomorrow has none", () => {
-    const laterThisWeek = new Date(2026, 6, 8);
-    const evenLater = new Date(2026, 6, 10);
-    const peek = selectTomorrowPeek(
-      [
-        event({
-          id: "l2",
-          title: "Even Later",
-          date: evenLater,
-          startTime: "9:00 AM",
-        }),
-        event({
-          id: "l1",
-          title: "Later This Week",
-          date: laterThisWeek,
-          startTime: "10:00 AM",
-        }),
-      ],
-      now,
-    );
-
-    expect(peek.items.map((e) => e.title)).toEqual([
-      "Later This Week",
-      "Even Later",
-    ]);
-    expect(peek.items.length).toBeLessThanOrEqual(3);
-    expect(peek.isTomorrow).toBe(false);
   });
 
   it("derives singular labels for exactly one remaining chore and one grocery item", () => {

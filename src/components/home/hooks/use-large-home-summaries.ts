@@ -17,6 +17,9 @@ export function useLargeHomeSummaries({
   const lists = useLists();
 
   return {
+    choreBoard: chores.data?.data ?? null,
+    choresLoading: chores.isLoading,
+    choresError: chores.isError,
     chores: deriveChoresSummary({
       board: chores.data?.data ?? null,
       isLoading: chores.isLoading,

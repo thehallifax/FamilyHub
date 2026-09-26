@@ -108,6 +108,10 @@ describe("useDashboardEvents", () => {
       "tomorrow-late",
       "day-after",
     ]);
+    expect(result.current.tomorrow.map((event) => event.id)).toEqual([
+      "tomorrow-early",
+      "tomorrow-late",
+    ]);
   });
 
   it("applies a single member focus consistently to today and coming up", async () => {

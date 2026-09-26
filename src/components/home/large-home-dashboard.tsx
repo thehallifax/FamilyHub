@@ -1,7 +1,13 @@
-import { useMemo } from "react";
-import { useFamilyMembers, useFamilyName } from "@/api";
+import { useMemo, useRef, useState } from "react";
+import {
+  isStaleChorePeriodError,
+  useCompleteChoreForCurrentPeriod,
+  useFamilyMembers,
+  useFamilyName,
+} from "@/api";
 import { useDashboardEvents } from "@/components/home/hooks/use-dashboard-events";
 import { useDashboardNow } from "@/components/home/hooks/use-hero-state";
+import { toast } from "@/components/ui/toaster";
 import { formatLocalDate, getEventKey } from "@/lib/time-utils";
 import type { CalendarEvent } from "@/lib/types";
 import { useAppStore } from "@/stores";
@@ -12,8 +18,8 @@ import { useLargeHomeSummaries } from "./hooks/use-large-home-summaries";
 import { deriveHeroState } from "./lib/hero-state";
 import {
   type HomeSummaryTarget,
+  selectHomeAgendaChores,
   selectRestOfDayItems,
-  selectTomorrowPeek,
 } from "./lib/large-home-selectors";
 
 const LARGE_HOME_GRID_CLASS =
@@ -39,11 +45,30 @@ export function LargeHomeDashboard({
   const members = useFamilyMembers();
   const liveNow = useDashboardNow();
   const now = nowOverride ?? liveNow;
-  const { today, comingUp, isLoading, isError, error } = useDashboardEvents({
+  const { today, tomorrow, isLoading, isError, error } = useDashboardEvents({
     currentDate: now,
     memberFocusId: null,
   });
   const summaries = useLargeHomeSummaries({ now });
+  const completingRef = useRef(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const completeChore = useCompleteChoreForCurrentPeriod({
+    onError: (completionError) => {
+      toast(
+        isStaleChorePeriodError(completionError)
+          ? {
+              title: "Chores were out of date",
+              description: "Refreshing the board. Try that again.",
+              variant: "destructive",
+            }
+          : {
+              title: "Could not complete chore",
+              description: "Please try again.",
+              variant: "destructive",
+            },
+      );
+    },
+  });
   const heroState = useMemo(
     () => deriveHeroState({ todayEvents: today, now }),
     [now, today],
@@ -56,10 +81,33 @@ export function LargeHomeDashboard({
     () => selectRestOfDayItems(today, heroEvent, now),
     [heroEvent, now, today],
   );
-  const tomorrowPeek = useMemo(
-    () => selectTomorrowPeek(comingUp, now),
-    [comingUp, now],
+  const choreItems = useMemo(
+    () =>
+      summaries.choreBoard ? selectHomeAgendaChores(summaries.choreBoard) : [],
+    [summaries.choreBoard],
   );
+
+  const openCalendarDate = (date: Date) =>
+    useAppStore.getState().focusCalendarDate(formatLocalDate(date));
+  const openChores = () => useAppStore.getState().setActiveModule("chores");
+  const handleCompleteChore = (item: (typeof choreItems)[number]) => {
+    if (completingRef.current || item.chore.completionAvailable === false)
+      return;
+    completingRef.current = true;
+    setIsCompleting(true);
+    completeChore.mutate(
+      {
+        templateId: item.chore.templateId,
+        request: { scope: item.scope, periodStartDate: item.periodStartDate },
+      },
+      {
+        onSettled: () => {
+          completingRef.current = false;
+          setIsCompleting(false);
+        },
+      },
+    );
+  };
 
   const openEvent = (event: CalendarEvent) => {
     useAppStore.getState().openCalendarEvent({
@@ -124,10 +172,18 @@ export function LargeHomeDashboard({
         <LargeTodayRail
           currentDate={now}
           todayItems={todayItems}
-          tomorrowItems={tomorrowPeek.items}
-          isTomorrow={tomorrowPeek.isTomorrow}
+          heroEventShown={heroEvent !== null}
+          tomorrowItems={tomorrow.slice(0, 3)}
+          tomorrowExtraCount={Math.max(0, tomorrow.length - 3)}
+          chores={choreItems}
+          choresLoading={summaries.choresLoading}
+          choresError={summaries.choresError}
+          isCompletingChore={isCompleting}
           members={members}
           onSelect={openEvent}
+          onOpenCalendarDate={openCalendarDate}
+          onOpenChores={openChores}
+          onCompleteChore={handleCompleteChore}
         />
       </div>
     </div>

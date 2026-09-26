@@ -1,5 +1,7 @@
-import { addDays, isSameDay, startOfDay } from "date-fns";
-import { choresNeedingAttentionCount } from "@/lib/chore-attention";
+import {
+  choresNeedingAttentionCount,
+  scheduledChoresNeedingAttention,
+} from "@/lib/chore-attention";
 import {
   formatLocalDate,
   getEventKey,
@@ -7,6 +9,8 @@ import {
 } from "@/lib/time-utils";
 import type {
   CalendarEvent,
+  ChoreBoardItem,
+  ChoreScope,
   ChoresBoard,
   ListSummary,
   MealBoard,
@@ -14,11 +18,7 @@ import type {
   MealSlot,
   MealType,
 } from "@/lib/types";
-import {
-  compareAllDayFirst,
-  compareByStartDateTime,
-  getEventDateTime,
-} from "./event-time";
+import { compareAllDayFirst, getEventDateTime } from "./event-time";
 
 export type SummaryStatus =
   | "loading"
@@ -49,6 +49,43 @@ export interface HomeStateSummary {
   target: HomeSummaryTarget;
 }
 
+export interface HomeAgendaChore {
+  chore: ChoreBoardItem;
+  scope: ChoreScope;
+  periodStartDate: string;
+}
+
+/** The same due/overdue board items and period identity used by Chores. */
+export function selectHomeAgendaChores(board: ChoresBoard): HomeAgendaChore[] {
+  const daily = board.today.assignees.flatMap((group) =>
+    group.chores
+      .filter(
+        (chore) =>
+          !chore.completed &&
+          (chore.dueState === "DUE" || chore.dueState === "OVERDUE"),
+      )
+      .map((chore) => ({
+        chore,
+        scope: "TODAY" as const,
+        periodStartDate: chore.periodStartDate ?? board.today.periodStartDate,
+      })),
+  );
+  const scheduled = scheduledChoresNeedingAttention(board).map((chore) => {
+    const scope: ChoreScope =
+      chore.cadence === "MONTHLY" ? "THIS_MONTH" : "THIS_WEEK";
+    const period = scope === "THIS_MONTH" ? board.thisMonth : board.thisWeek;
+    return {
+      chore,
+      scope,
+      periodStartDate: chore.periodStartDate ?? period.periodStartDate,
+    };
+  });
+  return [...daily, ...scheduled].sort((left, right) => {
+    if (left.chore.dueState === right.chore.dueState) return 0;
+    return left.chore.dueState === "OVERDUE" ? -1 : 1;
+  });
+}
+
 /**
  * Rest-of-day agenda items, excluding the hero by event KEY (recurring-safe:
  * matches on id, or recurringEventId+date for expanded instances) so the same
@@ -71,40 +108,6 @@ export function selectRestOfDayItems(
     })
     .sort(compareAllDayFirst)
     .slice(0, limit);
-}
-
-export interface TomorrowPeek {
-  items: CalendarEvent[];
-  /** True when `items` are actually tomorrow's events; false for the fallback. */
-  isTomorrow: boolean;
-}
-
-/**
- * Small look-ahead into tomorrow. Assumes `comingUpEvents` already excludes
- * today. Falls back to the earliest upcoming events (beyond tomorrow) when
- * tomorrow itself has nothing scheduled, so the peek is never empty while
- * later events exist. Callers should use `isTomorrow` to label the fallback
- * section as "Coming up" rather than "Tomorrow".
- */
-export function selectTomorrowPeek(
-  comingUpEvents: CalendarEvent[],
-  currentDate: Date,
-  limit = 3,
-): TomorrowPeek {
-  const tomorrow = startOfDay(addDays(currentDate, 1));
-
-  const tomorrowItems = comingUpEvents
-    .filter((event) => isSameDay(event.date, tomorrow))
-    .sort(compareByStartDateTime)
-    .slice(0, limit);
-
-  if (tomorrowItems.length > 0)
-    return { items: tomorrowItems, isTomorrow: true };
-
-  return {
-    items: [...comingUpEvents].sort(compareByStartDateTime).slice(0, limit),
-    isTomorrow: false,
-  };
 }
 
 /** Summaries always carry a routing target, even when loading or unavailable. */

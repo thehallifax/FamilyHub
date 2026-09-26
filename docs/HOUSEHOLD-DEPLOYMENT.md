@@ -77,7 +77,7 @@ Caddyfile and LAN-address port 443 binding remain unchanged.
 | Static server/proxy | Caddy `2.11.4-alpine` plus image digest | `Dockerfile` |
 
 The current `dev` backend tag is for staging only: it is **not** a reproducible
-production pin while the Milestone 2E changes are uncommitted. Before Mac mini
+production pin while the Milestone 2G changes are uncommitted. Before Mac mini
 deployment, review and commit the two repositories in a separate authorized step,
 record both exact commits, check out those commits, and set
 `FAMILYHUB_BACKEND_IMAGE_TAG` to the approved backend commit's short SHA. Do
@@ -123,7 +123,7 @@ mode.
 
 For a future production deployment, first verify that **both** checkouts are
 clean and at the reviewed commits, then use those commits to tag the locally
-built images. Example (after the Milestone 2E changes have been reviewed and
+built images. Example (after the Milestone 2G changes have been reviewed and
 committed by the owner):
 
 ```sh
@@ -337,20 +337,74 @@ the backend rejects direct OAuth-start requests with a structured 400. The
 encryption key remains mandatory for backend startup, including while Google
 is disabled; keep it with backups if Google tokens are ever stored.
 
-For **local-only** OAuth testing, register a Google *web application* OAuth
+For **MacBook-local** OAuth testing, register a Google *web application* OAuth
 client with authorized redirect URI exactly
 `http://localhost:8080/api/google/callback`, set its client ID/secret in the
 local `.env`, and use the local override. `GOOGLE_FRONTEND_REDIRECT` remains the
 plain `http://localhost:8080` origin; the backend adds the outcome query once.
 This Milestone did not verify an actual Google consent/token exchange.
 
-For eventual LAN production, the current raw private-IP callback
-`https://LAN_IP/api/google/callback` should **not** be treated as a usable Google
-web OAuth redirect. A Google-accepted hostname and matching callback design
-must be chosen and registered later. Google can remain disabled until then;
-this milestone does not add remote-access infrastructure. See [Google's web
-OAuth redirect URI validation rules](https://developers.google.com/identity/protocols/oauth2/web-server#uri-validation)
-for the localhost exception and raw-IP restriction.
+For LAN production, the default raw private-IP callback is **not** a usable
+Google web OAuth redirect. Before enabling Google, arrange an approved DNS
+hostname resolving to the Mac mini from household devices, working HTTPS with
+a certificate trusted by those devices, and a Google Web Application OAuth
+client with the exact authorized callback
+`https://<approved-hostname>/api/google/callback`. Set `FAMILYHUB_SITE_HOST` to
+that hostname in the private `.env` and set `GOOGLE_CLIENT_ID` and
+`GOOGLE_CLIENT_SECRET` there. Base Compose retains its LAN-IP-only port 443
+binding; the hostname changes the Caddy site, CORS origin, callback and
+frontend return URL together. Verify `docker compose -f compose.yaml config`
+before startup. The default remains the existing LAN-IP HTTPS site when the
+hostname is unset. This does **not** create DNS, provision a publicly trusted
+certificate, or expose FamilyHub outside the LAN. Google can remain disabled
+until those prerequisites are deliberately met. See [Google's OAuth redirect
+URI validation rules](https://support.google.com/cloud/answer/15549257?hl=en).
+
+Configuration sequence for the eventual hostname:
+
+1. In a Google Cloud project, enable the **Google Calendar API**. Configure
+   the OAuth consent screen and add the household test users if the app is in
+   testing mode. Grant only Calendar Events read-only and Calendar List
+   read-only scopes. Google may require domain verification/approval; check
+   the current Cloud Console requirements before relying on production sync.
+2. Create an OAuth client of type **Web application**, with authorized redirect
+   URI exactly `https://<approved-hostname>/api/google/callback` (no trailing
+   slash). The app's frontend return origin is
+   `https://<approved-hostname>`.
+3. Put the client ID/secret and `FAMILYHUB_SITE_HOST` in the private `.env`.
+   Generate `TOKEN_ENCRYPTION_KEY` once using `openssl rand -base64 32` and
+   retain it securely; do not regenerate it for an existing database.
+4. Run `docker compose -f compose.yaml config --quiet`, then
+   `docker compose -f compose.yaml up -d --build --wait`. Confirm all three
+   services are healthy and only Caddy is host-published. Visit the hostname
+   from a household device and confirm trusted HTTPS.
+5. In a member profile, choose **Connect Google Calendar**, complete consent,
+   choose calendars, then use **Sync Now**. Check the reported result and the
+   calendar/Home views. Deselect a calendar to remove its imported events, or
+   use **Disconnect** to remove all of that member's Google imports and tokens.
+
+After connection, choose the calendars to import. Google events remain
+read-only: edit or delete them in Google Calendar. "Sync Now" waits for a
+completed import and reports full or partial failure. Automatic sync runs
+periodically; a recent failure appears in the member's Google section until a
+successful retry, reconnect, or backend restart. Per-calendar last-success
+timestamps are persistent, but the recent failure message is process-local.
+Removing a calendar selection immediately removes only its imported events;
+reselecting it triggers a full import. Reconnecting replaces the old account's
+imported rows. Discovery failure is shown as an error and cannot silently
+save an empty selection. No live Google consent/token exchange was exercised
+by this local staging validation; test with real credentials only after the
+hostname and consent configuration are ready.
+Timed imports use the event's timezone (or its supplied offset), rather than
+converting to the household timezone; check travel-created events on a real
+device. All-day source dates remain calendar-local.
+
+Back up PostgreSQL and the private `.env` together, especially
+`TOKEN_ENCRYPTION_KEY`, which is required to decrypt restored Google tokens.
+Do not publish tokens, client secrets, or database dumps. If the key is lost,
+disconnect/reconnect Google accounts after restore. ICS is not implemented;
+a future read-only feed importer could reuse the source-owner/calendar-scope
+model, but needs its own authentication, fetch limits, and SSRF review.
 
 ## Current limits
 
@@ -364,6 +418,6 @@ for the localhost exception and raw-IP restriction.
 - The frontend and backend use an existing shared-family JWT login; no auth
   redesign is included here.
 - Frontend CI E2E still uses the latest published **upstream** backend image
-  as a compatibility check. It does not validate this uncommitted backend fork;
+  as a compatibility check. It does not validate this uncommitted backend work;
   migrate CI to a pinned fork release/commit before relying on it for fork
   regression coverage.

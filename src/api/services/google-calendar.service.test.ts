@@ -111,21 +111,26 @@ describe("googleCalendarService", () => {
   });
 
   describe("syncCalendar", () => {
-    it("calls POST endpoint and returns 202 Accepted", async () => {
+    it("returns the completed sync result", async () => {
       server.use(
         http.post(`*/google/sync/${MEMBER_ID}`, () =>
           HttpResponse.json(
             {
-              data: null,
-              message: "Sync started",
+              data: {
+                succeeded: 1,
+                failedCalendars: [],
+                message: "Google calendars synced successfully.",
+              },
+              message: "Google calendars synced successfully.",
             },
-            { status: 202 },
+            { status: 200 },
           ),
         ),
       );
 
       const result = await googleCalendarService.syncCalendar(MEMBER_ID);
-      expect(result).toEqual({ data: null, message: "Sync started" });
+      expect(result.data.succeeded).toBe(1);
+      expect(result.data.failedCalendars).toEqual([]);
     });
   });
 });

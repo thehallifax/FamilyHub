@@ -61,10 +61,14 @@ export function GoogleCalendarSection({
 
   const handleSync = () => {
     syncMutation.mutate(memberId, {
-      onSuccess: () => {
+      onSuccess: (response) => {
+        const result = response.data;
+        const successful =
+          result.succeeded > 0 && result.failedCalendars.length === 0;
         toast({
-          title: "Sync started",
-          description: "Your Google Calendar events are being synced.",
+          title: successful ? "Sync complete" : "Sync needs attention",
+          description: result.message,
+          variant: successful ? undefined : "destructive",
         });
       },
       onError: () => {
@@ -105,7 +109,7 @@ export function GoogleCalendarSection({
     );
   }
 
-  const lastSyncedAt = status?.calendars?.[0]?.lastSyncedAt;
+  const lastSyncedAt = status?.lastSuccessfulSyncAt;
   const lastSyncedLabel = lastSyncedAt
     ? `Last synced ${formatDistanceToNow(new Date(lastSyncedAt), { addSuffix: true })}`
     : "Never synced";
@@ -140,11 +144,13 @@ export function GoogleCalendarSection({
         </div>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            <span className="text-sm text-foreground">Connected</span>
-          </div>
+          <p className="text-sm text-foreground">Connected</p>
           <p className="text-xs text-muted-foreground">{lastSyncedLabel}</p>
+          {status?.syncIssue && (
+            <p role="alert" className="text-xs text-destructive">
+              {status.syncIssue}
+            </p>
+          )}
 
           <div className="flex gap-2">
             <Button

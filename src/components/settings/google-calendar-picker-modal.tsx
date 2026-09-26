@@ -23,10 +23,12 @@ export function GoogleCalendarPickerModal({
   onOpenChange,
   memberId,
 }: GoogleCalendarPickerModalProps) {
-  const { data: calendarsResponse, isLoading } = useGoogleCalendars(
-    memberId,
-    open,
-  );
+  const {
+    data: calendarsResponse,
+    isLoading,
+    isError,
+    refetch,
+  } = useGoogleCalendars(memberId, open);
   const updateCalendars = useUpdateGoogleCalendars();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const hasSynced = useRef(false);
@@ -71,6 +73,7 @@ export function GoogleCalendarPickerModal({
   };
 
   const handleSave = () => {
+    if (isError || isLoading || !calendarsResponse) return;
     updateCalendars.mutate(
       { memberId, calendarIds: Array.from(selectedIds) },
       {
@@ -102,6 +105,19 @@ export function GoogleCalendarPickerModal({
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : isError ? (
+          <div role="alert" className="space-y-3 py-4 text-sm">
+            <p>
+              Could not load Google calendars. Your selection has not changed.
+            </p>
+            <p className="text-muted-foreground">
+              Retry. If this keeps happening, reconnect Google from this member
+              profile.
+            </p>
+            <Button type="button" variant="outline" onClick={() => refetch()}>
+              Retry
+            </Button>
           </div>
         ) : (
           <div className="space-y-2 py-2">
@@ -145,7 +161,12 @@ export function GoogleCalendarPickerModal({
           <Button
             type="button"
             onClick={handleSave}
-            disabled={updateCalendars.isPending || isLoading}
+            disabled={
+              updateCalendars.isPending ||
+              isLoading ||
+              isError ||
+              !calendarsResponse
+            }
           >
             {updateCalendars.isPending ? "Saving..." : "Save"}
           </Button>

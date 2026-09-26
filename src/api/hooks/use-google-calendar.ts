@@ -20,6 +20,7 @@ export function useGoogleConnectionStatus(memberId: string) {
     queryFn: () => googleCalendarService.getConnectionStatus(memberId),
     enabled: !!memberId,
     staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
   });
 }
 

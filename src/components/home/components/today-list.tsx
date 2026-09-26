@@ -108,7 +108,12 @@ export const TodayList = memo(function TodayList({
                 </div>
 
                 <p className="mt-1 min-w-0 truncate text-sm leading-5 text-foreground/55">
-                  {[eventAudienceLabel(event, members), affix, event.location]
+                  {[
+                    event.source === "GOOGLE" ? "Google" : null,
+                    eventAudienceLabel(event, members),
+                    affix,
+                    event.location,
+                  ]
                     .filter(Boolean)
                     .join(" · ")}
                 </p>

@@ -11,6 +11,7 @@ services:
       - "${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}:443:443"
     environment:
       FAMILYHUB_LAN_IP: ${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}
+      FAMILYHUB_SITE_HOST: ${FAMILYHUB_SITE_HOST:-${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}}
     volumes:
       - caddy_data:/data
       - caddy_config:/config
@@ -39,11 +40,11 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
       TOKEN_ENCRYPTION_KEY: ${TOKEN_ENCRYPTION_KEY:?Set TOKEN_ENCRYPTION_KEY in .env}
-      CORS_ALLOWED_ORIGINS: https://${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}
+      CORS_ALLOWED_ORIGINS: https://${FAMILYHUB_SITE_HOST:-${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
-      GOOGLE_REDIRECT_URI: https://${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}/api/google/callback
-      GOOGLE_FRONTEND_REDIRECT: https://${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}
+      GOOGLE_REDIRECT_URI: https://${FAMILYHUB_SITE_HOST:-${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}}/api/google/callback
+      GOOGLE_FRONTEND_REDIRECT: https://${FAMILYHUB_SITE_HOST:-${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}}
       FAMILYHUB_MEDIA_DIR: /app/media
     volumes:
       - media_data:/app/media

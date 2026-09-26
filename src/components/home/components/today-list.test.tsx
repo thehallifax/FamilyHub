@@ -92,6 +92,18 @@ describe("TodayList", () => {
     expect(onSelect).toHaveBeenCalledWith(event);
   });
 
+  it("identifies an imported Google event", () => {
+    renderWithUser(
+      <TodayList
+        currentDate={currentDate}
+        events={[createEvent({ source: "GOOGLE" })]}
+        members={testMembers}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Google ·/)).toBeInTheDocument();
+  });
+
   it("renders nothing when there are no events", () => {
     const { container } = renderWithUser(
       <TodayList

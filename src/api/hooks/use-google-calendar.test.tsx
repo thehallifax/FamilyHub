@@ -60,9 +60,14 @@ describe("useGoogleConnectionStatus", () => {
 describe("useSyncGoogleCalendar", () => {
   it("invalidates status and events on success", async () => {
     server.use(
-      http.post(
-        `${API_BASE}/google/sync/${MEMBER_ID}`,
-        () => new HttpResponse(null, { status: 204 }),
+      http.post(`${API_BASE}/google/sync/${MEMBER_ID}`, () =>
+        HttpResponse.json({
+          data: {
+            succeeded: 1,
+            failedCalendars: [],
+            message: "Google calendars synced successfully.",
+          },
+        }),
       ),
     );
 

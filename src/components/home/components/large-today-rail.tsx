@@ -44,7 +44,7 @@ function EventRow({
           className="min-w-0 text-sm text-muted-foreground [overflow-wrap:anywhere] @min-[28rem]:max-w-[50%] @min-[28rem]:truncate"
           title={audience}
         >
-          {audience}
+          {event.source === "GOOGLE" ? `Google · ${audience}` : audience}
         </span>
       </span>
     </button>

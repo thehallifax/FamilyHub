@@ -39,6 +39,19 @@ describe("LargeTodayRail", () => {
     expect(screen.queryByText(/week/i)).not.toBeInTheDocument();
   });
 
+  it("identifies an imported Google event", () => {
+    render(
+      <LargeTodayRail
+        currentDate={new Date(2026, 6, 5)}
+        todayItems={[{ ...event("g", "Imported"), source: "GOOGLE" }]}
+        tomorrowItems={[]}
+        members={members}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/Google ·/)).toBeInTheDocument();
+  });
+
   it('renders "Coming up" instead of "Tomorrow" for fallback peek items', () => {
     render(
       <LargeTodayRail

@@ -71,6 +71,11 @@ export const ComingUp = memo(function ComingUp({
                 {formatEventTimeForDisplay(event.startTime)}
               </span>
               <span className="min-w-0 flex-1 truncate">{event.title}</span>
+              {event.source === "GOOGLE" && (
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  Google
+                </span>
+              )}
               <span
                 aria-hidden="true"
                 className={cn("h-2.5 w-2.5 shrink-0 rounded-full", colors.bg)}

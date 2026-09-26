@@ -4,6 +4,7 @@ import type {
   GoogleAuthUrl,
   GoogleCalendarInfo,
   GoogleConnectionStatus,
+  GoogleSyncResult,
 } from "@/lib/types";
 
 export const googleCalendarService = {
@@ -39,8 +40,12 @@ export const googleCalendarService = {
     );
   },
 
-  async syncCalendar(memberId: string): Promise<void> {
-    return httpClient.post(`/google/sync/${memberId}`);
+  async syncCalendar(memberId: string): Promise<ApiResponse<GoogleSyncResult>> {
+    return httpClient.post<ApiResponse<GoogleSyncResult>>(
+      `/google/sync/${memberId}`,
+      undefined,
+      { timeout: 120000 },
+    );
   },
 
   async disconnect(memberId: string): Promise<void> {

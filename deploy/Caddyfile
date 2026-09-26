@@ -1,4 +1,4 @@
-https://{$FAMILYHUB_LAN_IP} {
+https://{$FAMILYHUB_SITE_HOST} {
 	tls internal
 	encode zstd gzip
 

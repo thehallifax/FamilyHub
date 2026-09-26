@@ -33,6 +33,18 @@ describe("ComingUp", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("identifies an imported Google event", () => {
+    renderWithUser(
+      <ComingUp
+        currentDate={currentDate}
+        events={[createEvent({ source: "GOOGLE" })]}
+        members={testMembers}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Google")).toBeInTheDocument();
+  });
+
   it("renders at most three upcoming rows and labels tomorrow distinctly", () => {
     renderWithUser(
       <ComingUp

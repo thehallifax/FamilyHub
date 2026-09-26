@@ -1,3 +1,4 @@
+import { setupMswServer } from "@/test/mocks/server";
 import FamilyHub from "./App";
 import { useAppStore } from "./stores";
 import {
@@ -41,6 +42,7 @@ function setViewportWidth(width: number) {
 }
 
 describe("App shell", () => {
+  setupMswServer();
   beforeEach(() => {
     seedAuthStore({ isAuthenticated: true });
     seedFamilyStore({
@@ -103,7 +105,9 @@ describe("App shell", () => {
     render(<FamilyHub />);
 
     await waitFor(() => {
-      expect(useAppStore.getState().activeModule).toBe("calendar");
+      expect(
+        screen.getByRole("navigation", { name: /primary/i }),
+      ).toBeInTheDocument();
     });
     // Desktop renders the nav rail (also aria-label="Primary" — see
     // navigation-tabs.test.tsx), not the mobile bottom nav. Only one
@@ -158,7 +162,7 @@ describe("App shell", () => {
     expect(useAppStore.getState().activeModule).toBeNull();
   });
 
-  it("animates the module container when the active module changes", () => {
+  it("animates the module container when the active module changes", async () => {
     // Mobile width so Home (null) is valid; reduced-motion OFF so ScreenTransition animates.
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: query.includes("max-width"),
@@ -176,6 +180,7 @@ describe("App shell", () => {
 
     useAppStore.setState({ activeModule: "calendar", isSidebarOpen: false });
     render(<FamilyHub />);
+    await screen.findByRole("navigation", { name: /primary/i });
 
     // Switch between two eager modules so the container's token changes (no lazy/Suspense).
     act(() => {

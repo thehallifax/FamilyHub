@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "@/stores";
+import { setupMswServer } from "@/test/mocks/server";
 import {
   render,
   screen,
@@ -46,6 +47,7 @@ vi.mock("@/components/shared", async (importOriginal) => {
 });
 
 describe("FamilyHub large-screen Home shell", () => {
+  setupMswServer();
   beforeEach(() => {
     viewport.isMobile = false;
     seedAuthStore({ isAuthenticated: true });

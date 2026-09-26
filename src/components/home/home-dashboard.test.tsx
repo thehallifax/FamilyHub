@@ -1,11 +1,13 @@
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach } from "vitest";
 import type { ListDetail } from "@/lib/types";
+import { defaultAppearance } from "@/lib/types";
 import { useAppStore } from "@/stores";
 import { createTestEventResponse, testMembers } from "@/test/fixtures";
 import {
   API_BASE,
   resetMockEvents,
+  seedMockAppearance,
   seedMockEvents,
   seedMockLists,
   server,
@@ -16,6 +18,7 @@ import {
   renderWithUser,
   screen,
   seedFamilyStore,
+  waitFor,
   waitForMemberSelected,
 } from "@/test/test-utils";
 import { HomeDashboard } from "./home-dashboard";
@@ -87,6 +90,64 @@ describe("HomeDashboard", () => {
 
   afterEach(() => {
     resetMockEvents();
+  });
+
+  it("keeps the default Home background unchanged", async () => {
+    render(<HomeDashboard nowOverride={currentDate} />);
+    await screen.findByTestId("home-background");
+    expect(screen.getByTestId("home-background")).toHaveAttribute(
+      "data-background-mode",
+      "DEFAULT",
+    );
+  });
+
+  it("renders the saved gradient and strength on Home", async () => {
+    seedMockAppearance({
+      ...defaultAppearance,
+      backgroundMode: "GRADIENT",
+      gradient: "LAGOON",
+      backgroundStrength: 80,
+    });
+    render(<HomeDashboard nowOverride={currentDate} />);
+    await waitFor(() =>
+      expect(screen.getByTestId("home-background")).toHaveAttribute(
+        "data-background-mode",
+        "GRADIENT",
+      ),
+    );
+    expect(
+      screen
+        .getByTestId("home-background")
+        .querySelector("[style*='linear-gradient']"),
+    ).toBeTruthy();
+  });
+
+  it("renders an authenticated saved photo behind Home", async () => {
+    seedMockAppearance({
+      ...defaultAppearance,
+      backgroundMode: "PHOTO",
+      photoKey: "photo-1",
+    });
+    server.use(
+      http.get(
+        `${API_BASE}/family/appearance/photo`,
+        () => new HttpResponse(new Blob(["jpeg"], { type: "image/jpeg" })),
+      ),
+    );
+    URL.createObjectURL = vi.fn(() => "blob:home-photo");
+    URL.revokeObjectURL = vi.fn();
+    render(<HomeDashboard nowOverride={currentDate} />);
+    await waitFor(() =>
+      expect(screen.getByTestId("home-background")).toHaveAttribute(
+        "data-background-mode",
+        "PHOTO",
+      ),
+    );
+    expect(
+      screen
+        .getByTestId("home-background")
+        .querySelector("[style*='blob:home-photo']"),
+    ).toBeTruthy();
   });
 
   it("renders the mobile dashboard surface instead of the launcher grid", async () => {

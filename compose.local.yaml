@@ -1,5 +1,6 @@
-# MacBook-only HTTP staging. Always layer this on top of compose.yaml; never
-# use it for the LAN/iPad deployment. Requires Docker Compose 2.24.4+.
+# MacBook HTTP staging, reachable from trusted LAN devices for iPad UI tests.
+# Always layer this on top of compose.yaml; never use it for production.
+# Requires Docker Compose 2.24.4+.
 services:
   frontend:
     ports: !override

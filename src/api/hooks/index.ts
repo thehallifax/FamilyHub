@@ -1,4 +1,13 @@
 export {
+  appearanceKeys,
+  useAppearance,
+  useAppearancePhotoUrl,
+  useRemoveAppearancePhoto,
+  useUpdateAppearance,
+  useUploadAppearancePhoto,
+} from "./use-appearance";
+
+export {
   authKeys,
   clearStoredToken,
   getStoredToken,

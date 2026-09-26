@@ -213,26 +213,25 @@ describe("PreferencesSheet — timezone", () => {
 // ============================================================================
 
 describe("PreferencesSheet — roadmap stubs", () => {
-  it("renders exactly two disabled Coming soon rows: Notifications and Appearance", () => {
+  it("keeps Notifications as the only disabled roadmap row and opens Appearance", () => {
     const client = seedClient(baseFamily("America/Chicago"));
 
     render(<PreferencesSheet open onOpenChange={noop} />, {
       queryClient: client,
     });
 
-    // Exactly two stub rows — no additional stubs.
+    // Appearance is now a real section, not a disabled stub.
     const stubRows = screen.getAllByRole("button", { name: /coming soon/i });
-    expect(stubRows).toHaveLength(2);
+    expect(stubRows).toHaveLength(1);
 
     const notifications = screen.getByRole("button", {
       name: /notifications/i,
     });
-    const appearance = screen.getByRole("button", { name: /appearance/i });
-
-    for (const row of [notifications, appearance]) {
-      expect(row).toBeDisabled();
-      expect(row).toHaveAttribute("aria-disabled", "true");
-    }
+    expect(notifications).toBeDisabled();
+    expect(notifications).toHaveAttribute("aria-disabled", "true");
+    expect(
+      screen.getByRole("region", { name: "Appearance" }),
+    ).toBeInTheDocument();
   });
 });
 

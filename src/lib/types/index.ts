@@ -1,4 +1,5 @@
 export * from "./api-response";
+export * from "./appearance";
 export * from "./auth";
 export * from "./calendar";
 export * from "./chores";

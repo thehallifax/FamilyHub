@@ -97,7 +97,7 @@ export function LargeHomeDashboard({
   return (
     <div
       data-testid="large-home-dashboard"
-      className="flex-1 overflow-y-auto bg-background"
+      className="flex-1 overflow-y-auto bg-transparent"
     >
       <div className={LARGE_HOME_GRID_CLASS}>
         <div className="flex min-w-0 flex-col gap-5">

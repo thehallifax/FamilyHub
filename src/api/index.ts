@@ -10,6 +10,7 @@ export {
 // Hooks - Chores
 // Hooks - Family
 export {
+  appearanceKeys,
   authKeys,
   calendarKeys,
   choreKeys,
@@ -27,6 +28,8 @@ export {
   syncFamilyFromStorage,
   TEMP_MEMBER_ID_PREFIX,
   useAddMember,
+  useAppearance,
+  useAppearancePhotoUrl,
   useBulkCreateListItems,
   useCalendarEvent,
   useCalendarEvents,
@@ -68,6 +71,7 @@ export {
   useRecipe,
   useRecipes,
   useRegister,
+  useRemoveAppearancePhoto,
   useRemoveMealSlot,
   useRemoveMember,
   useRenameListCategory,
@@ -77,6 +81,7 @@ export {
   useSyncGoogleCalendar,
   useUncompleteChoreForCurrentPeriod,
   useUnusedColors,
+  useUpdateAppearance,
   useUpdateChoreTemplate,
   useUpdateEvent,
   useUpdateFamily,
@@ -87,10 +92,12 @@ export {
   useUpdateListPreferences,
   useUpdateMember,
   useUpdateRecipe,
+  useUploadAppearancePhoto,
   useUpsertMealSlot,
 } from "./hooks";
 // Services
 export {
+  appearanceService,
   authService,
   calendarService,
   choreService,

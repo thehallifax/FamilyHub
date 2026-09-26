@@ -3,6 +3,8 @@ import { formatLocalDate, parseLocalDate } from "@/lib/time-utils";
 import type {
   AddMemberRequest,
   ApiResponse,
+  Appearance,
+  AppearanceUpdate,
   CalendarEventResponse,
   CategoryDeleteResult,
   ChoreBoardItem,
@@ -50,6 +52,7 @@ import type {
   UpsertMealSlotRequest,
   UsernameCheckResponse,
 } from "@/lib/types";
+import { defaultAppearance } from "@/lib/types";
 import { saveMealPlanSchema } from "@/lib/validations";
 
 // In-memory storage for mock calendar events (reset between tests)
@@ -61,6 +64,8 @@ let mockChoresBoard: ChoresBoard = createEmptyChoresBoard();
 
 // In-memory storage for mock family data (reset between tests)
 let mockFamily: FamilyData | null = null;
+let mockAppearance: Appearance = { ...defaultAppearance };
+let mockAppearancePhoto: Blob | null = null;
 
 // In-memory storage for mock users (reset between tests)
 interface MockUser {
@@ -237,6 +242,12 @@ export function getMockChoresBoard(): ChoresBoard {
  */
 export function resetMockFamily(): void {
   mockFamily = null;
+  mockAppearance = { ...defaultAppearance };
+  mockAppearancePhoto = null;
+}
+
+export function seedMockAppearance(value: Appearance): void {
+  mockAppearance = { ...value };
 }
 
 /**
@@ -2010,6 +2021,40 @@ export const handlers = [
   // ============================================================================
   // Family API Handlers
   // ============================================================================
+
+  http.get(`${API_BASE}/family/appearance`, () =>
+    HttpResponse.json(createApiResponse(mockAppearance)),
+  ),
+  http.put(`${API_BASE}/family/appearance`, async ({ request }) => {
+    const update = (await request.json()) as AppearanceUpdate;
+    mockAppearance = { ...mockAppearance, ...update };
+    return HttpResponse.json(createApiResponse(mockAppearance));
+  }),
+  http.post(`${API_BASE}/family/appearance/photo`, async ({ request }) => {
+    const form = await request.formData();
+    const file = form.get("file");
+    if (!file || typeof file === "string")
+      return HttpResponse.json({ message: "Image required" }, { status: 400 });
+    mockAppearancePhoto = file;
+    mockAppearance = { ...mockAppearance, photoKey: "mock-photo-key" };
+    return HttpResponse.json(createApiResponse(mockAppearance));
+  }),
+  http.get(`${API_BASE}/family/appearance/photo`, () =>
+    mockAppearancePhoto
+      ? new HttpResponse(mockAppearancePhoto, {
+          headers: { "Content-Type": "image/jpeg" },
+        })
+      : HttpResponse.json({ message: "No photo" }, { status: 404 }),
+  ),
+  http.delete(`${API_BASE}/family/appearance/photo`, () => {
+    mockAppearancePhoto = null;
+    mockAppearance = {
+      ...mockAppearance,
+      photoKey: null,
+      backgroundMode: "DEFAULT",
+    };
+    return HttpResponse.json(createApiResponse(mockAppearance));
+  }),
 
   // GET /family - Get family data
   http.get(`${API_BASE}/family`, () => {

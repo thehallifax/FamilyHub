@@ -77,8 +77,8 @@ Caddyfile and LAN-address port 443 binding remain unchanged.
 | Static server/proxy | Caddy `2.11.4-alpine` plus image digest | `Dockerfile` |
 
 The current `dev` backend tag is for staging only: it is **not** a reproducible
-production pin while the Milestone 2B changes are uncommitted. Before Mac mini
-deployment, commit/review the two repositories in a separate authorized step,
+production pin while the Milestone 2E changes are uncommitted. Before Mac mini
+deployment, review and commit the two repositories in a separate authorized step,
 record both exact commits, check out those commits, and set
 `FAMILYHUB_BACKEND_IMAGE_TAG` to the approved backend commit's short SHA. Do
 not use a mutable branch as the production version. Run the acceptance checks
@@ -123,8 +123,8 @@ mode.
 
 For a future production deployment, first verify that **both** checkouts are
 clean and at the reviewed commits, then use those commits to tag the locally
-built images. Example (after the Milestone 2B changes have been committed by
-the owner):
+built images. Example (after the Milestone 2E changes have been reviewed and
+committed by the owner):
 
 ```sh
 git -C /path/containing/FamilyHub status --short
@@ -135,10 +135,10 @@ cd /path/containing/FamilyHub
 FAMILYHUB_FRONTEND_IMAGE_TAG=$(git rev-parse --short=12 HEAD) FAMILYHUB_BACKEND_IMAGE_TAG=$(git -C ../family-hub-api rev-parse --short=12 HEAD) docker compose -f compose.yaml up -d --build --wait
 ```
 
-The approved commit placeholders must be replaced with actual reviewed SHAs;
-there is no Milestone 2B release SHA yet. Never update the backend without a
-database backup and restore rehearsal. `FAMILYHUB_BACKEND_CONTEXT` may point
-to a different backend checkout path; it must be a trusted, pinned checkout.
+The approved commit placeholders must be replaced with actual reviewed SHAs.
+Never update the backend without a complete backup and restore rehearsal.
+`FAMILYHUB_BACKEND_CONTEXT` may point to a different backend checkout path; it
+must be a trusted, pinned checkout.
 The backend Dockerfile pins reviewed multi-architecture Java 21 build/runtime
 base-image digests. Record the built image IDs for rollback as well; Maven
 dependencies remain fixed by the backend POM, but external repositories and
@@ -188,7 +188,7 @@ docker compose start
 docker compose down
 ```
 
-`docker compose down` leaves the named PostgreSQL and Caddy volumes intact.
+`docker compose down` leaves the named PostgreSQL, media, and Caddy volumes intact.
 **Never use `docker compose down -v` on a household stack.** Replacing a
 container or updating an image also leaves those volumes intact.
 
@@ -216,19 +216,35 @@ device. If a backup directory is created inside the checkout, `backups/` and
 
 ```sh
 mkdir -p /path/outside/repo/familyhub-backups
-bash scripts/household-backup.sh /path/outside/repo/familyhub-backups
+bash scripts/household-backup-bundle.sh /path/outside/repo/familyhub-backups
 ```
 
-The script writes a PostgreSQL custom-format archive with restrictive file
-permissions and checks that `pg_restore` can read its directory. A listing
-check is not a restore test. Rehearse restoration using a separate, disposable
-Compose project and volume while your main stack stays running:
+The complete backup is a private `familyhub-complete-YYYYMMDDTHHMMSSZ.tar.gz`
+containing `database.dump` (PostgreSQL custom format), `media.tar` (the private
+processed-photo volume), and a README. The script verifies that PostgreSQL
+and tar can list the archives. It assumes no photo is being uploaded during
+the backup; pause appearance changes while it runs. Copy bundles off-host.
+The older `scripts/household-backup.sh` still makes a database-only `.dump`
+for pre-V22 recovery, but **does not back up photos**.
+
+Extract a bundle into a private, empty working directory for restoration:
 
 ```sh
-docker compose -p familyhub-restore-check up -d db
+mkdir -m 700 /path/outside/repo/familyhub-restore-work
+tar -xzf /path/outside/repo/familyhub-backups/familyhub-complete-YYYYMMDDTHHMMSSZ.tar.gz \
+  -C /path/outside/repo/familyhub-restore-work
+```
+
+A listing check is not a restore test. Rehearse using a separate, disposable
+Compose project and volumes while the main stack stays running:
+
+```sh
+docker compose -p familyhub-restore-check up -d --wait db
 docker compose -p familyhub-restore-check exec -T db sh -c \
   'PGPASSWORD="$POSTGRES_PASSWORD" pg_restore -h 127.0.0.1 -U familyhub -d familyhub --no-owner --no-acl --exit-on-error' \
-  < /path/outside/repo/familyhub-backups/familyhub-YYYYMMDDTHHMMSSZ.dump
+  < /path/outside/repo/familyhub-restore-work/database.dump
+docker compose -p familyhub-restore-check run --rm --no-deps -T --entrypoint tar backend \
+  -C /app/media -xf - < /path/outside/repo/familyhub-restore-work/media.tar
 docker compose -p familyhub-restore-check exec -T db sh -c \
   'PGPASSWORD="$POSTGRES_PASSWORD" psql -h 127.0.0.1 -U familyhub -d familyhub -c "SELECT version, success FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 1"'
 docker compose -p familyhub-restore-check exec -T db sh -c \
@@ -236,7 +252,9 @@ docker compose -p familyhub-restore-check exec -T db sh -c \
 ```
 
 Inspect the counts and start the backend against this disposable project if
-you want an application-level restore check. When finished, remove only the
+you want an application-level restore check. Check restored media file counts
+with `docker compose -p familyhub-restore-check run --rm --no-deps -T --entrypoint
+find backend /app/media -type f`. When finished, remove only the
 explicitly named disposable project after confirming it contains no needed
 data:
 
@@ -251,10 +269,12 @@ an empty database on startup. Use the same pinned images and `.env` (especially
 the Google encryption key):
 
 ```sh
-docker compose -p familyhub-recovered up -d db
+docker compose -p familyhub-recovered up -d --wait db
 docker compose -p familyhub-recovered exec -T db sh -c \
   'PGPASSWORD="$POSTGRES_PASSWORD" pg_restore -h 127.0.0.1 -U familyhub -d familyhub --no-owner --no-acl --exit-on-error' \
-  < /path/outside/repo/familyhub-backups/familyhub-YYYYMMDDTHHMMSSZ.dump
+  < /path/outside/repo/familyhub-restore-work/database.dump
+docker compose -p familyhub-recovered run --rm --no-deps -T --entrypoint tar backend \
+  -C /app/media -xf - < /path/outside/repo/familyhub-restore-work/media.tar
 docker compose stop
 docker compose -p familyhub-recovered up -d --build --wait
 ```
@@ -262,13 +282,24 @@ docker compose -p familyhub-recovered up -d --build --wait
 Confirm the restored data through the UI before deciding whether to retire the
 original project. From then on, include `-p familyhub-recovered` in operational
 commands; for backups, use `COMPOSE_PROJECT_NAME=familyhub-recovered bash
-scripts/household-backup.sh /path/outside/repo/familyhub-backups`. The new Caddy
+scripts/household-backup-bundle.sh /path/outside/repo/familyhub-backups`. The new Caddy
 volume has a new CA, so clients must trust its root certificate. On a new host
 with no existing FamilyHub volume, the default project name can be used instead.
 
-The archive includes family data, password hashes, Google token ciphertext,
-and Flyway migration history. Protect it accordingly. There is no image/file
-upload store in this milestone; recipe and avatar images are external URLs.
+The bundle includes family data, password hashes, Google token ciphertext,
+Flyway migration history, and private household photos. Protect it accordingly.
+Restore the same `TOKEN_ENCRYPTION_KEY` from the separately secured `.env` if
+Google tokens exist; losing it makes those tokens unreadable. V22 appearance
+settings are in PostgreSQL, while processed photos are in the backend's
+`/app/media` Docker volume. Database-only backups after V22 leave photo
+references without image files. Recipe and avatar images remain external URLs.
+
+Appearance photos accept JPEG and PNG only. Uploads are capped at 12 MiB,
+16 megapixels, and 6000 pixels per axis; minimum size is 640×360. The backend
+re-encodes to metadata-free JPEG within 1920×1200. HEIC and EXIF orientation
+normalisation are not supported. Switching away from Photo keeps the uploaded
+image for later; replacing or removing it removes the previous file. Photos
+are served only through the authenticated family-scoped API.
 
 ## Updates, rollback, and host migration
 
@@ -291,8 +322,9 @@ not work. Restore the pre-update backup into a fresh volume and run the prior
 pinned versions. Keep the original volume intact until recovery succeeds.
 
 To move to the Mac mini, verify Docker and its LAN IP first, copy the selected
-frontend checkout/deployment files and `.env` securely, take a fresh database
-backup, restore it into a new volume there, and run the same acceptance checks.
+frontend checkout/deployment files and `.env` securely, take a fresh complete
+database-plus-media backup, restore it into new volumes there, and run the
+same acceptance checks.
 Preserve the Caddy data volume if you want existing iPads to trust the same CA;
 otherwise export and trust the new host's root certificate on each client.
 Never copy the live PostgreSQL data directory between running hosts.

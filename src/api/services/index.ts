@@ -1,3 +1,4 @@
+export { appearanceService } from "./appearance.service";
 export { authService } from "./auth.service";
 export { calendarService } from "./calendar.service";
 export { choreService } from "./chores.service";

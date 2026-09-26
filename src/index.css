@@ -54,6 +54,45 @@
   --sidebar-ring: oklch(0.55 0.18 285);
 }
 
+/* Household accent only changes interactive design tokens, never member or
+   semantic status colours. Purple is the unchanged default. */
+:root[data-familyhub-accent="blue"] {
+  --primary: oklch(0.5 0.15 255);
+  --ring: var(--primary);
+  --sidebar-primary: var(--primary);
+  --sidebar-ring: var(--primary);
+}
+:root[data-familyhub-accent="teal"] {
+  --primary: oklch(0.48 0.11 190);
+  --ring: var(--primary);
+  --sidebar-primary: var(--primary);
+  --sidebar-ring: var(--primary);
+}
+:root[data-familyhub-accent="green"] {
+  --primary: oklch(0.49 0.12 145);
+  --ring: var(--primary);
+  --sidebar-primary: var(--primary);
+  --sidebar-ring: var(--primary);
+}
+:root[data-familyhub-accent="orange"] {
+  --primary: oklch(0.51 0.15 50);
+  --ring: var(--primary);
+  --sidebar-primary: var(--primary);
+  --sidebar-ring: var(--primary);
+}
+:root[data-familyhub-accent="rose"] {
+  --primary: oklch(0.51 0.16 355);
+  --ring: var(--primary);
+  --sidebar-primary: var(--primary);
+  --sidebar-ring: var(--primary);
+}
+:root[data-familyhub-accent="slate"] {
+  --primary: oklch(0.46 0.05 255);
+  --ring: var(--primary);
+  --sidebar-primary: var(--primary);
+  --sidebar-ring: var(--primary);
+}
+
 @theme inline {
   --font-sans: "Nunito", "Nunito Fallback", sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback";

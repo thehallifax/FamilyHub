@@ -1,4 +1,4 @@
-import { Bell, LocateFixed, Palette, Vibrate, X } from "lucide-react";
+import { Bell, LocateFixed, Vibrate, X } from "lucide-react";
 import { useState } from "react";
 import { useFamilyData, useUpdateFamily } from "@/api";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { ResponsiveFormDialog } from "@/components/ui/responsive-form-dialog";
 import { Switch } from "@/components/ui/switch";
 import { canVibrate } from "@/lib/haptics";
 import { type HapticCategory, useHapticsPreference } from "@/stores";
+import { AppearanceSection } from "./appearance-section";
 
 /**
  * Curated US zones offered in the timezone select. The family's current zone
@@ -24,10 +25,7 @@ const CURATED_TIMEZONES: ReadonlyArray<{ id: string; label: string }> = [
   { id: "Pacific/Honolulu", label: "Hawaii — Pacific/Honolulu" },
 ];
 
-const COMING_SOON_ROWS = [
-  { icon: Bell, label: "Notifications" },
-  { icon: Palette, label: "Appearance" },
-] as const;
+const COMING_SOON_ROWS = [{ icon: Bell, label: "Notifications" }] as const;
 
 const SUB_TOGGLES: ReadonlyArray<{ key: HapticCategory; label: string }> = [
   { key: "taps", label: "Taps" },
@@ -41,8 +39,7 @@ interface PreferencesSheetProps {
 }
 
 /**
- * Family-wide app preferences: the BE-backed family timezone plus disabled
- * roadmap stubs. Family Settings owns "who we are"; this surface owns "how
+ * Family-wide app preferences. Family Settings owns "who we are"; this surface owns "how
  * the app behaves".
  */
 export function PreferencesSheet({
@@ -137,6 +134,8 @@ export function PreferencesSheet({
             Use this device's timezone
           </Button>
         </section>
+
+        <AppearanceSection />
 
         {/* Haptics Section — canVibrate() gates on the Vibration API + a coarse
             (touch) pointer, so this is hidden on iOS Safari and on desktop

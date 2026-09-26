@@ -1,5 +1,5 @@
-import { lazy, Suspense, useState } from "react";
-import { useSetupComplete } from "@/api";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { useAppearance, useSetupComplete } from "@/api";
 import { CalendarModule } from "@/components/calendar";
 import { HomeDashboard } from "@/components/home";
 import {
@@ -18,6 +18,7 @@ import {
   useIsMobile,
   useLargeScreenHomeIdleReturn,
 } from "@/hooks";
+import { applyAppearanceAccent } from "@/lib/appearance-theme";
 import {
   type ModuleType,
   useAppStore,
@@ -110,6 +111,7 @@ export default function FamilyHub() {
   const authHasHydrated = useAuthHasHydrated();
   const isAuthenticated = useIsAuthenticated();
   const setupComplete = useSetupComplete();
+  const appearance = useAppearance(isAuthenticated && setupComplete);
   const isMobile = useIsMobile();
   const setActiveModule = useAppStore((state) => state.setActiveModule);
 
@@ -126,6 +128,11 @@ export default function FamilyHub() {
 
   // State to toggle between login and onboarding for new users
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    const accent = isAuthenticated ? appearance.data?.data.accent : undefined;
+    applyAppearanceAccent(accent);
+  }, [appearance.data?.data.accent, isAuthenticated]);
 
   // Wait for both stores to hydrate from localStorage
   if (!hasHydrated || !authHasHydrated) {
@@ -165,6 +172,9 @@ export default function FamilyHub() {
       </>
     );
   }
+
+  // Keep the default shell visible only after its household accent is known.
+  if (appearance.isPending && appearance.isFetching) return <LoadingScreen />;
 
   return (
     <>

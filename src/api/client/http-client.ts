@@ -29,6 +29,7 @@ function getAuthHeader(): Record<string, string> {
 interface RequestConfig extends Omit<RequestInit, "body"> {
   params?: QueryParams;
   timeout?: number;
+  responseType?: "blob";
 }
 
 interface HttpClientConfig {
@@ -127,7 +128,14 @@ export function createHttpClient(config: HttpClientConfig) {
     endpoint: string,
     options: RequestConfig & { body?: unknown } = {},
   ): Promise<T> {
-    const { params, timeout = 30000, body, ...fetchOptions } = options;
+    const {
+      params,
+      timeout = 30000,
+      body,
+      responseType,
+      ...fetchOptions
+    } = options;
+    const isFormData = body instanceof FormData;
 
     // Build URL with query params
     const cleanEndpoint = endpoint.startsWith("/")
@@ -151,12 +159,12 @@ export function createHttpClient(config: HttpClientConfig) {
         ...fetchOptions,
         signal: controller.signal,
         headers: {
-          "Content-Type": "application/json",
+          ...(!isFormData && { "Content-Type": "application/json" }),
           ...defaultHeaders,
           ...getAuthHeader(),
           ...fetchOptions.headers,
         },
-        body: body ? JSON.stringify(body) : undefined,
+        body: isFormData ? body : body ? JSON.stringify(body) : undefined,
       });
 
       clearTimeout(timeoutId);
@@ -177,7 +185,7 @@ export function createHttpClient(config: HttpClientConfig) {
         return undefined as T;
       }
 
-      return response.json();
+      return responseType === "blob" ? (response.blob() as T) : response.json();
     } catch (error) {
       clearTimeout(timeoutId);
 
@@ -208,12 +216,18 @@ export function createHttpClient(config: HttpClientConfig) {
     get: <T>(endpoint: string, config?: RequestConfig) =>
       request<T>(endpoint, { ...config, method: "GET" }),
 
+    getBlob: (endpoint: string) =>
+      request<Blob>(endpoint, { method: "GET", responseType: "blob" }),
+
     post: <T>(endpoint: string, data?: unknown, config?: RequestConfig) =>
       request<T>(endpoint, {
         ...config,
         method: "POST",
         body: data,
       }),
+
+    postForm: <T>(endpoint: string, form: FormData) =>
+      request<T>(endpoint, { method: "POST", body: form }),
 
     put: <T>(endpoint: string, data?: unknown, config?: RequestConfig) =>
       request<T>(endpoint, {

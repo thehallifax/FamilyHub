@@ -44,6 +44,9 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: https://${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}/api/google/callback
       GOOGLE_FRONTEND_REDIRECT: https://${FAMILYHUB_LAN_IP:?Set FAMILYHUB_LAN_IP in .env}
+      FAMILYHUB_MEDIA_DIR: /app/media
+    volumes:
+      - media_data:/app/media
     depends_on:
       db:
         condition: service_healthy
@@ -84,5 +87,6 @@ networks:
 
 volumes:
   postgres_data:
+  media_data:
   caddy_data:
   caddy_config:

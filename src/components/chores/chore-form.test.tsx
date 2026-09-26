@@ -54,6 +54,7 @@ describe("ChoreForm", () => {
           cadence: "WEEKLY",
           dueWeekday: "TUESDAY",
           dueDayOfMonth: null,
+          recurrenceAnchorDate: null,
         });
       },
       { timeout: TEST_TIMEOUTS.FORM_SUBMIT },
@@ -157,6 +158,87 @@ describe("ChoreForm", () => {
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({ dueWeekday: "TUESDAY" }),
+      ),
+    );
+  });
+
+  it("requires a matching weekday and first due date for fortnightly chores", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        defaultValues={{ title: "Recycling", assignedToMemberId: "member-1" }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Fortnightly" }));
+    expect(
+      screen.getByRole("button", { name: "Fortnightly" }).parentElement,
+    ).toHaveClass("grid-cols-2");
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    expect(await screen.findAllByRole("alert")).toHaveLength(2);
+    expect(onSubmit).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Saturday" }));
+    await user.type(screen.getByLabelText(/starting/i), "2026-10-02");
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    expect(
+      await screen.findByText("Starting date must match the due day"),
+    ).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+    await user.clear(screen.getByLabelText(/starting/i));
+    await user.type(screen.getByLabelText(/starting/i), "2026-10-03");
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cadence: "FORTNIGHTLY",
+          dueWeekday: "SATURDAY",
+          recurrenceAnchorDate: "2026-10-03",
+        }),
+      ),
+    );
+    onSubmit.mockClear();
+    await user.click(screen.getByRole("button", { name: "Sunday" }));
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    expect(
+      await screen.findByText("Starting date must match the due day"),
+    ).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("edits a fortnightly chore and clears its anchor on cadence change", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        isEditing
+        defaultValues={{
+          title: "Recycling",
+          assignedToMemberId: "member-1",
+          cadence: "FORTNIGHTLY",
+          dueWeekday: "SATURDAY",
+          recurrenceAnchorDate: "2026-10-03",
+        }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+    expect(screen.getByLabelText(/starting/i)).toHaveValue("2026-10-03");
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recurrenceAnchorDate: "2026-10-03",
+        }),
+      ),
+    );
+    onSubmit.mockClear();
+    await user.click(screen.getByRole("button", { name: "Weekly" }));
+    await user.click(screen.getByRole("button", { name: "Saturday" }));
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          recurrenceAnchorDate: null,
+          dueWeekday: "SATURDAY",
+        }),
       ),
     );
   });

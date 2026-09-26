@@ -20,12 +20,14 @@ interface ChoreRowProps {
 function cadenceLabel(cadence: ChoreBoardItem["cadence"]): string {
   if (cadence === "DAILY") return "Daily";
   if (cadence === "WEEKLY") return "Weekly";
+  if (cadence === "FORTNIGHTLY") return "Fortnightly";
   return "Monthly";
 }
 
 const IMPLIED_BY: Record<ChoreCadence, ChoreScope> = {
   DAILY: "TODAY",
   WEEKLY: "THIS_WEEK",
+  FORTNIGHTLY: "TODAY", // Show the cadence within the shared This Week column.
   MONTHLY: "THIS_MONTH",
 };
 
@@ -38,7 +40,9 @@ export function choreDueLabel(chore: ChoreBoardItem): string | null {
   }
   if (chore.dueState === "DUE") return "Due today";
   const day =
-    chore.cadence === "WEEKLY" && chore.dueWeekday
+    (chore.cadence === "WEEKLY" ||
+      (chore.cadence === "FORTNIGHTLY" && chore.dueState === "OVERDUE")) &&
+    chore.dueWeekday
       ? chore.dueWeekday.charAt(0) + chore.dueWeekday.slice(1).toLowerCase()
       : chore.dueDate
         ? format(parseLocalDate(chore.dueDate), "MMM d")
@@ -57,6 +61,7 @@ export function ChoreRow({
 }: ChoreRowProps) {
   const showCadence = IMPLIED_BY[chore.cadence] !== activeScope;
   const dueLabel = choreDueLabel(chore);
+  const completionAvailable = chore.completionAvailable !== false;
 
   // Shared by the checkoff and the row-body button below, so both stay on the
   // same haptics path (success() on the completing transition only).
@@ -100,6 +105,7 @@ export function ChoreRow({
             : `Mark ${chore.title} complete`
         }
         onClick={toggleCompletion}
+        disabled={!completionAvailable}
         className="group flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left"
       >
         {/* group-hover, not hover: the indicator is no longer the hovered

@@ -216,7 +216,7 @@ describe("large home selectors", () => {
     });
   });
 
-  it("surfaces scheduled weekly/monthly work when Today is clear", () => {
+  it("surfaces due fortnightly and monthly work but excludes upcoming fortnightly work", () => {
     const board = choresBoard(0, 0);
     board.thisWeek.summary.total = 2;
     board.thisMonth.summary.total = 1;
@@ -228,7 +228,7 @@ describe("large home selectors", () => {
           {
             templateId: "due",
             title: "Bins",
-            cadence: "WEEKLY",
+            cadence: "FORTNIGHTLY",
             assignedToMemberId: "m1",
             completed: false,
             completedAt: null,
@@ -237,7 +237,7 @@ describe("large home selectors", () => {
           {
             templateId: "later",
             title: "Vacuum",
-            cadence: "WEEKLY",
+            cadence: "FORTNIGHTLY",
             assignedToMemberId: "m1",
             completed: false,
             completedAt: null,

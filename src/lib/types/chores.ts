@@ -1,6 +1,6 @@
 import type { FamilyColor } from "./family";
 
-export type ChoreCadence = "DAILY" | "WEEKLY" | "MONTHLY";
+export type ChoreCadence = "DAILY" | "WEEKLY" | "FORTNIGHTLY" | "MONTHLY";
 export type ChoreScope = "TODAY" | "THIS_WEEK" | "THIS_MONTH";
 export type ChoreWeekday =
   | "SUNDAY"
@@ -26,6 +26,10 @@ export interface ChoreBoardItem {
   completedAt: string | null;
   dueWeekday?: ChoreWeekday | null;
   dueDayOfMonth?: number | null;
+  recurrenceAnchorDate?: string | null;
+  periodStartDate?: string | null;
+  periodEndDate?: string | null;
+  completionAvailable?: boolean;
   dueDate?: string | null;
   dueState?: ChoreDueState;
 }
@@ -70,6 +74,7 @@ export interface CreateChoreTemplateRequest {
   activeFrom: string;
   dueWeekday?: ChoreWeekday | null;
   dueDayOfMonth?: number | null;
+  recurrenceAnchorDate?: string | null;
 }
 
 export interface UpdateChoreTemplateRequest {
@@ -80,6 +85,7 @@ export interface UpdateChoreTemplateRequest {
   archived?: boolean;
   dueWeekday?: ChoreWeekday | null;
   dueDayOfMonth?: number | null;
+  recurrenceAnchorDate?: string | null;
 }
 
 export interface ChoreTemplate {
@@ -93,6 +99,7 @@ export interface ChoreTemplate {
   updatedAt: string;
   dueWeekday?: ChoreWeekday | null;
   dueDayOfMonth?: number | null;
+  recurrenceAnchorDate?: string | null;
 }
 
 export interface UpdateCurrentPeriodCompletionRequest {

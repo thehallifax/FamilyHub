@@ -38,6 +38,7 @@ export function ChoreForm({
   const defaultCadence = defaultValues?.cadence;
   const defaultDueWeekday = defaultValues?.dueWeekday;
   const defaultDueDayOfMonth = defaultValues?.dueDayOfMonth;
+  const defaultRecurrenceAnchorDate = defaultValues?.recurrenceAnchorDate;
   const [cadenceChanged, setCadenceChanged] = useState(false);
 
   const initialValues = useMemo(
@@ -48,6 +49,7 @@ export function ChoreForm({
       cadence: defaultCadence ?? "DAILY",
       dueWeekday: defaultDueWeekday ?? null,
       dueDayOfMonth: defaultDueDayOfMonth ?? null,
+      recurrenceAnchorDate: defaultRecurrenceAnchorDate ?? null,
     }),
     [
       defaultTitle,
@@ -55,6 +57,7 @@ export function ChoreForm({
       defaultCadence,
       defaultDueWeekday,
       defaultDueDayOfMonth,
+      defaultRecurrenceAnchorDate,
       familyMembers,
     ],
   );
@@ -119,6 +122,7 @@ export function ChoreForm({
   const cadenceOptions: Array<{ value: ChoreCadence; label: string }> = [
     { value: "DAILY", label: "Daily" },
     { value: "WEEKLY", label: "Weekly" },
+    { value: "FORTNIGHTLY", label: "Fortnightly" },
     { value: "MONTHLY", label: "Monthly" },
   ];
 
@@ -158,7 +162,7 @@ export function ChoreForm({
 
       <div className="space-y-2">
         <Label>Repeats</Label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {cadenceOptions.map((option) => (
             <Button
               key={option.value}
@@ -170,7 +174,12 @@ export function ChoreForm({
                   setCadenceChanged(true);
                   setValue("dueWeekday", null);
                   setValue("dueDayOfMonth", null);
-                  clearErrors(["dueWeekday", "dueDayOfMonth"]);
+                  setValue("recurrenceAnchorDate", null);
+                  clearErrors([
+                    "dueWeekday",
+                    "dueDayOfMonth",
+                    "recurrenceAnchorDate",
+                  ]);
                 }
                 setValue("cadence", option.value, {
                   shouldDirty: true,
@@ -186,7 +195,7 @@ export function ChoreForm({
         <FormError message={errors.cadence?.message} />
       </div>
 
-      {cadence === "WEEKLY" && (
+      {(cadence === "WEEKLY" || cadence === "FORTNIGHTLY") && (
         <div className="space-y-2">
           <Label>Due day</Label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -223,6 +232,25 @@ export function ChoreForm({
             </p>
           )}
           <FormError message={errors.dueWeekday?.message} />
+        </div>
+      )}
+      {cadence === "FORTNIGHTLY" && (
+        <div className="space-y-2">
+          <Label htmlFor="chore-starting-date">Starting (first due date)</Label>
+          <Input
+            id="chore-starting-date"
+            type="date"
+            {...register("recurrenceAnchorDate")}
+            className={cn(
+              "min-h-11 bg-input",
+              errors.recurrenceAnchorDate && "border-destructive",
+            )}
+            aria-invalid={!!errors.recurrenceAnchorDate}
+          />
+          <p className="text-xs text-muted-foreground">
+            Choose a date matching the due day. Repeats every 14 days.
+          </p>
+          <FormError message={errors.recurrenceAnchorDate?.message} />
         </div>
       )}
       {cadence === "MONTHLY" && (

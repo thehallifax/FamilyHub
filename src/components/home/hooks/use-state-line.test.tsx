@@ -93,8 +93,12 @@ describe("useStateLine", () => {
             assignees: [
               {
                 chores: [
-                  { dueState: "DUE", completed: false },
-                  { dueState: "UPCOMING", completed: false },
+                  { cadence: "FORTNIGHTLY", dueState: "DUE", completed: false },
+                  {
+                    cadence: "FORTNIGHTLY",
+                    dueState: "UPCOMING",
+                    completed: false,
+                  },
                 ],
               },
             ],

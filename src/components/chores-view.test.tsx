@@ -324,6 +324,7 @@ describe("ChoresView", () => {
         cadence: "WEEKLY",
         dueWeekday: "TUESDAY",
         dueDayOfMonth: null,
+        recurrenceAnchorDate: null,
         activeFrom: "2026-05-17",
       });
     });
@@ -531,6 +532,90 @@ describe("ChoresView", () => {
     expect(
       await screen.findByRole("button", { name: "Edit Take out trash" }),
     ).toBeVisible();
+  });
+
+  it("renders fortnightly due/overdue work and completes its own 14-day period", async () => {
+    const board = sampleChoresBoard();
+    board.thisWeek.assignees[0].chores[0] = {
+      ...board.thisWeek.assignees[0].chores[0],
+      title: "Recycling",
+      cadence: "FORTNIGHTLY",
+      dueWeekday: "SATURDAY",
+      recurrenceAnchorDate: "2026-05-16",
+      dueDate: "2026-05-16",
+      dueState: "OVERDUE",
+      periodStartDate: "2026-05-09",
+      periodEndDate: "2026-05-22",
+      completionAvailable: true,
+    };
+    let submitted: UpdateCurrentPeriodCompletionRequest | null = null;
+    server.use(
+      http.put(
+        `${API_BASE}/chores/templates/trash-id/current-period-completion`,
+        async ({ request }) => {
+          submitted =
+            (await request.json()) as UpdateCurrentPeriodCompletionRequest;
+          return HttpResponse.json({
+            data: {
+              scope: "THIS_WEEK",
+              periodStartDate: "2026-05-09",
+              periodEndDate: "2026-05-22",
+              item: {
+                ...board.thisWeek.assignees[0].chores[0],
+                completed: true,
+                dueState: "COMPLETE",
+              },
+            },
+          });
+        },
+      ),
+    );
+    seedMockChoresBoard(board);
+    const { user } = renderWithUser(<ChoresView />);
+    const attention = await screen.findByRole("region", {
+      name: "Scheduled chores needing attention",
+    });
+    expect(attention).toHaveTextContent("Recycling");
+    expect(attention).toHaveTextContent("Overdue");
+    const row = await screen.findByTestId("chore-row-trash-id");
+    expect(row).toHaveTextContent("Fortnightly");
+    await user.click(
+      screen.getByRole("button", { name: "Mark Recycling complete" }),
+    );
+    await waitFor(() =>
+      expect(submitted).toEqual({
+        scope: "THIS_WEEK",
+        periodStartDate: "2026-05-09",
+      }),
+    );
+  });
+
+  it("shows a future fortnight as upcoming without adding it to Needs attention", async () => {
+    const board = sampleChoresBoard();
+    board.thisWeek.assignees[0].chores[0] = {
+      ...board.thisWeek.assignees[0].chores[0],
+      title: "Recycling",
+      cadence: "FORTNIGHTLY",
+      dueWeekday: "SATURDAY",
+      recurrenceAnchorDate: "2026-10-03",
+      dueDate: "2026-10-03",
+      dueState: "UPCOMING",
+      periodStartDate: "2026-09-26",
+      periodEndDate: "2026-10-09",
+      completionAvailable: false,
+    };
+    seedMockChoresBoard(board);
+    renderWithUser(<ChoresView />);
+    const row = await screen.findByTestId("chore-row-trash-id");
+    expect(row).toHaveTextContent("Due Oct 3");
+    expect(
+      screen.queryByRole("region", {
+        name: "Scheduled chores needing attention",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Mark Recycling complete" }),
+    ).toBeDisabled();
   });
 
   it("edits a legacy weekly chore without inventing a due day", async () => {

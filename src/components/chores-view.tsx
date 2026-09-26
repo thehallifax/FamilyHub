@@ -93,6 +93,7 @@ export function ChoresView() {
           cadence: values.cadence,
           dueWeekday: values.dueWeekday ?? null,
           dueDayOfMonth: values.dueDayOfMonth ?? null,
+          recurrenceAnchorDate: values.recurrenceAnchorDate ?? null,
         },
       });
       return;
@@ -105,6 +106,7 @@ export function ChoresView() {
       cadence: values.cadence,
       dueWeekday: values.dueWeekday ?? null,
       dueDayOfMonth: values.dueDayOfMonth ?? null,
+      recurrenceAnchorDate: values.recurrenceAnchorDate ?? null,
       activeFrom,
     });
   };
@@ -121,7 +123,7 @@ export function ChoresView() {
       templateId: chore.templateId,
       request: {
         scope: scope.scope,
-        periodStartDate: scope.periodStartDate,
+        periodStartDate: chore.periodStartDate ?? scope.periodStartDate,
       },
     });
   };
@@ -131,7 +133,7 @@ export function ChoresView() {
       templateId: chore.templateId,
       request: {
         scope: scope.scope,
-        periodStartDate: scope.periodStartDate,
+        periodStartDate: chore.periodStartDate ?? scope.periodStartDate,
       },
     });
   };
@@ -206,7 +208,8 @@ export function ChoresView() {
                 No recurring chores yet
               </h2>
               <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
-                Add a daily, weekly, or monthly routine to get started.
+                Add a daily, weekly, fortnightly, or monthly routine to get
+                started.
               </p>
             </div>
           )}
@@ -226,7 +229,10 @@ export function ChoresView() {
                     type="button"
                     onClick={() =>
                       setSelectedScopeKey(
-                        chore.cadence === "WEEKLY" ? "thisWeek" : "thisMonth",
+                        chore.cadence === "WEEKLY" ||
+                          chore.cadence === "FORTNIGHTLY"
+                          ? "thisWeek"
+                          : "thisMonth",
                       )
                     }
                     className="min-h-11 rounded-lg border border-border bg-card px-3 py-2 text-left text-sm hover:border-primary"
@@ -292,6 +298,7 @@ export function ChoresView() {
                 cadence: editingChore.cadence,
                 dueWeekday: editingChore.dueWeekday ?? null,
                 dueDayOfMonth: editingChore.dueDayOfMonth ?? null,
+                recurrenceAnchorDate: editingChore.recurrenceAnchorDate ?? null,
               }
             : undefined
         }

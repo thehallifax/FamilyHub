@@ -22,9 +22,10 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/toaster";
 import { useBackHandler, useIsMobile } from "@/hooks";
+import { eventAudienceLabel, eventColors } from "@/lib/event-audience";
 import { formatRecurrenceLabel } from "@/lib/recurrence-utils";
 import type { CalendarEvent } from "@/lib/types";
-import { colorMap, getFamilyMember } from "@/lib/types";
+import { getFamilyMember } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { MobileEventDetail } from "./mobile-event-detail";
 
@@ -74,14 +75,19 @@ function EventDetailModal({
     onEdit();
   };
 
-  const member = getFamilyMember(familyMembers, event.memberId);
-  const colors = member ? colorMap[member.color] : null;
+  const member = event.memberId
+    ? getFamilyMember(familyMembers, event.memberId)
+    : undefined;
+  const colors = eventColors(event, familyMembers);
+  const audienceLabel = eventAudienceLabel(event, familyMembers);
 
-  if (isMobile && member) {
+  if (isMobile) {
     return (
       <MobileEventDetail
         event={event}
         member={member}
+        audienceLabel={audienceLabel}
+        colors={colors}
         isOpen={isOpen}
         onClose={onClose}
         onEdit={onEdit}
@@ -138,9 +144,9 @@ function EventDetailModal({
                 colors?.bg || "bg-muted-foreground",
               )}
             >
-              {member?.name.charAt(0)}
+              {audienceLabel.charAt(0)}
             </div>
-            <span className="font-medium text-foreground">{member?.name}</span>
+            <span className="font-medium text-foreground">{audienceLabel}</span>
           </div>
 
           {/* Event details */}

@@ -1,4 +1,5 @@
 import { useMemo, useRef } from "react";
+import { eventColors } from "@/lib/event-audience";
 import {
   CALENDAR_START_HOUR,
   compareEventsByTime,
@@ -7,7 +8,7 @@ import {
   isEventOnDate,
   parseTime,
 } from "@/lib/time-utils";
-import { type CalendarEvent, colorMap, type FamilyMember } from "@/lib/types";
+import type { CalendarEvent, FamilyMember } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import {
   CurrentTimeIndicator,
@@ -225,10 +226,9 @@ export function MobileDailyView({
               const columnWidth = 100 / effectiveColumns;
               const left = Math.min(column, 1) * columnWidth;
 
-              const member = memberMap.get(event.memberId);
-              const borderColor = member
-                ? colorMap[member.color].hex
-                : colorMap.coral.hex;
+              const borderColor = eventColors(event, [
+                ...memberMap.values(),
+              ]).hex;
 
               // Strip layout fields before passing to caller
               const {

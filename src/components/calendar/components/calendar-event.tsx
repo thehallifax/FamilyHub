@@ -1,7 +1,7 @@
 import { Repeat } from "lucide-react";
 import { useFamilyMembers } from "@/api";
+import { eventColors } from "@/lib/event-audience";
 import type { CalendarEvent } from "@/lib/types";
-import { colorMap, getFamilyMember } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export function GoogleBadge({ size = 14 }: { size?: number }) {
@@ -56,8 +56,7 @@ export function CalendarEventCard({
   variant = "default",
 }: CalendarEventCardProps) {
   const familyMembers = useFamilyMembers();
-  const member = getFamilyMember(familyMembers, event.memberId);
-  const colors = member ? colorMap[member.color] : colorMap.coral;
+  const colors = eventColors(event, familyMembers);
 
   if (variant === "large") {
     return (

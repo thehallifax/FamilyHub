@@ -44,6 +44,7 @@ import { railThresholdPx } from "@/components/calendar/utils/day-rail";
 import { hasScheduleWindowEvents } from "@/components/calendar/utils/schedule-rows";
 import { toast } from "@/components/ui/toaster";
 import { useIsLargeScreen, useIsMobile, useMediaQuery } from "@/hooks";
+import { eventMatchesMembers } from "@/lib/event-audience";
 import { isOfflineWriteError } from "@/lib/offline/read-only-guard";
 import { buildRRule } from "@/lib/recurrence-utils";
 import {
@@ -319,7 +320,7 @@ export function CalendarModule() {
   // Client-side filtering based on filter state
   const events = useMemo(() => {
     return rawEvents.filter((event) => {
-      const memberMatches = filter.selectedMembers.includes(event.memberId);
+      const memberMatches = eventMatchesMembers(event, filter.selectedMembers);
       const allDayMatches = filter.showAllDayEvents || !event.isAllDay;
       return memberMatches && allDayMatches;
     });
@@ -403,7 +404,10 @@ export function CalendarModule() {
       endTime: format24hTo12h(formData.endTime),
       date: formData.date,
       endDate: formData.endDate ?? null,
-      memberId: formData.memberId,
+      memberId: formData.memberIds?.[0] ?? "",
+      audienceType: formData.audienceType ?? "MEMBERS",
+      memberIds:
+        formData.audienceType === "FAMILY" ? [] : (formData.memberIds ?? []),
       isAllDay: formData.isAllDay,
       location: formData.location,
       description: formData.description,
@@ -462,7 +466,10 @@ export function CalendarModule() {
       endTime: format24hTo12h(formData.endTime),
       date: formData.date,
       endDate: formData.endDate ?? null,
-      memberId: formData.memberId,
+      memberId: formData.memberIds?.[0] ?? "",
+      audienceType: formData.audienceType ?? "MEMBERS",
+      memberIds:
+        formData.audienceType === "FAMILY" ? [] : (formData.memberIds ?? []),
       isAllDay: formData.isAllDay,
       location: formData.location,
       description: formData.description,

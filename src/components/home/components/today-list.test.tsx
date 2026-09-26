@@ -63,16 +63,15 @@ describe("TodayList", () => {
     );
 
     expect(screen.queryByText("Hero event")).not.toBeInTheDocument();
-    expect(
-      screen
-        .getAllByRole("button")
-        .slice(0, 2)
-        .map((button) => button.textContent ?? ""),
-    ).toEqual(
-      expect.arrayContaining(["Vacation→ ends Mon", "Conferencefrom Thu →"]),
+    const firstTwoRows = screen.getAllByRole("button").slice(0, 2);
+    expect(firstTwoRows.map((button) => button.textContent ?? "")).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Vacation"),
+        expect.stringContaining("Conference"),
+      ]),
     );
-    expect(screen.getByText("→ ends Mon")).toBeInTheDocument();
-    expect(screen.getByText("from Thu →")).toBeInTheDocument();
+    expect(screen.getByText(/John · → ends Mon/)).toBeInTheDocument();
+    expect(screen.getByText(/John · from Thu →/)).toBeInTheDocument();
     expect(screen.getByText("4:00 PM")).toBeInTheDocument();
   });
 
@@ -163,5 +162,36 @@ describe("TodayList", () => {
     // "done" belongs to completion copy ("2 of 6 done") — an elapsed event was
     // not completed by anyone, so it must not borrow the word.
     expect(screen.queryByText(/·\s*done/i)).toBeNull();
+  });
+
+  it("keeps long title and audience text constrained while exposing the full label", () => {
+    const sharedMembers = [
+      testMembers[0],
+      { ...testMembers[1], name: "Isabella" },
+      { ...testMembers[2], name: "Kathryn-With-An-Exceptionally-Long-Name" },
+    ];
+    const longTitle = "An unusually long event title for the family Today list";
+    renderWithUser(
+      <TodayList
+        currentDate={currentDate}
+        events={[
+          createEvent({
+            title: longTitle,
+            audienceType: "MEMBERS",
+            memberIds: sharedMembers.map((member) => member.id),
+          }),
+        ]}
+        members={sharedMembers}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    const row = screen.getByRole("button", { name: new RegExp(longTitle) });
+    expect(row).toHaveClass("min-w-0");
+    expect(screen.getByText(longTitle)).toHaveClass("min-w-0", "truncate");
+    const label = "John + Isabella + Kathryn-With-An-Exceptionally-Long-Name";
+    expect(row).toHaveAccessibleName(new RegExp(label.replaceAll("+", "\\+")));
+    expect(screen.getByText(label)).toHaveClass("min-w-0", "truncate");
+    expect(screen.getByText("2:00 PM")).toHaveClass("shrink-0");
   });
 });

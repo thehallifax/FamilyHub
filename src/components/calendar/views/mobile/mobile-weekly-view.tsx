@@ -8,12 +8,13 @@ import {
 } from "date-fns";
 import { ChevronRight } from "lucide-react";
 import { useMemo } from "react";
+import { eventColors } from "@/lib/event-audience";
 import {
   compareEventsByTime,
   DAY_INITIALS,
   isEventOnDate,
 } from "@/lib/time-utils";
-import { type CalendarEvent, colorMap, type FamilyMember } from "@/lib/types";
+import type { CalendarEvent, FamilyMember } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { MOBILE_FAB_SCROLL_PADDING } from "../../components/floating-action-layout";
 import { SwipeContainer } from "./swipe-container";
@@ -73,10 +74,10 @@ export function MobileWeeklyView({
           const memberColors = [
             ...new Set(
               dayEvents
-                .map((e) => memberMap.get(e.memberId)?.color)
+                .map((e) => eventColors(e, [...memberMap.values()]).bg)
                 .filter(Boolean),
             ),
-          ].slice(0, 3) as (keyof typeof colorMap)[];
+          ].slice(0, 3);
 
           return (
             <button
@@ -119,7 +120,7 @@ export function MobileWeeklyView({
                   {memberColors.map((color) => (
                     <span
                       key={color}
-                      className={cn("w-1 h-1 rounded-full", colorMap[color].bg)}
+                      className={cn("w-1 h-1 rounded-full", color)}
                     />
                   ))}
                 </div>
@@ -174,9 +175,9 @@ export function MobileWeeklyView({
                   </div>
                 ) : (
                   dayEvents.map((event) => {
-                    const member = memberMap.get(event.memberId);
-                    const color = member?.color ?? "coral";
-                    const dotColorClass = colorMap[color].bg;
+                    const dotColorClass = eventColors(event, [
+                      ...memberMap.values(),
+                    ]).bg;
 
                     return (
                       <button

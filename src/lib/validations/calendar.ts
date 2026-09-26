@@ -44,7 +44,9 @@ export const eventFormSchema = z
       .string()
       .min(1, "End time is required")
       .regex(TIME_24H_FORMAT_REGEX, "Invalid time format"),
-    memberId: z.string().min(1, "Please select a family member"),
+    memberId: z.string().optional(), // legacy form defaults only
+    audienceType: z.enum(["FAMILY", "MEMBERS"]).optional(),
+    memberIds: z.array(z.string()).optional(),
     location: z
       .string()
       .max(255, "Location must be 255 characters or less")
@@ -69,6 +71,13 @@ export const eventFormSchema = z
       .regex(DATE_FORMAT_REGEX, "Invalid date format")
       .optional(),
   })
+  .refine(
+    (data) =>
+      data.audienceType === "FAMILY" ||
+      (data.memberIds?.length ?? 0) > 0 ||
+      !!data.memberId,
+    { message: "Choose Everyone or at least one person", path: ["memberIds"] },
+  )
   .refine(
     (data) =>
       data.isAllDay ||

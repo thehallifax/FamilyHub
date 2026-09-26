@@ -21,7 +21,9 @@ import { cn } from "@/lib/utils";
 
 interface MobileEventDetailProps {
   event: CalendarEvent;
-  member: { id: string; name: string; color: FamilyColor };
+  member?: { id: string; name: string; color: FamilyColor };
+  audienceLabel?: string;
+  colors?: { bg: string; text: string; light: string; hex: string };
   isOpen: boolean;
   onClose: () => void;
   onEdit: () => void;
@@ -33,6 +35,8 @@ interface MobileEventDetailProps {
 function MobileEventDetail({
   event,
   member,
+  audienceLabel,
+  colors: audienceColors,
   isOpen,
   onClose,
   onEdit,
@@ -75,7 +79,9 @@ function MobileEventDetail({
     handleDeleteClick();
   };
 
-  const colors = colorMap[member.color];
+  const colors =
+    audienceColors ?? (member ? colorMap[member.color] : colorMap.coral);
+  const displayAudience = audienceLabel ?? member?.name ?? "Everyone";
   const hexColor = colors.hex;
 
   // Format date for display — multi-day shows range, single-day shows full date
@@ -157,10 +163,10 @@ function MobileEventDetail({
             className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
             style={{ backgroundColor: "rgba(255,255,255,0.35)" }}
           >
-            {member.name.charAt(0)}
+            {displayAudience.charAt(0)}
           </div>
           <span className="text-sm font-medium text-white/90">
-            {member.name}
+            {displayAudience}
           </span>
         </div>
       </div>

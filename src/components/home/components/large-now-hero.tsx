@@ -1,6 +1,6 @@
 import { Sparkles } from "lucide-react";
+import { eventAudienceLabel, eventColors } from "@/lib/event-audience";
 import type { CalendarEvent, FamilyMember } from "@/lib/types";
-import { colorMap } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { getEventDateTime } from "../lib/event-time";
 import type { HeroState } from "../lib/hero-state";
@@ -60,16 +60,18 @@ function ariaFor(state: HeroState, now: Date) {
 export function LargeNowHero({
   state,
   member,
+  members,
   now,
   onOpenEvent,
 }: {
   state: HeroState;
   member?: FamilyMember;
+  members?: FamilyMember[];
   now: Date;
   onOpenEvent: (event: CalendarEvent) => void;
 }) {
-  const colors = member ? colorMap[member.color] : null;
   const event = isEventState(state) ? state.event : null;
+  const colors = event ? eventColors(event, member ? [member] : []) : null;
   const content = (
     <div className="relative min-h-[22rem] overflow-hidden rounded-lg border border-border/70 bg-card px-8 py-8 shadow-sm lg:min-h-[28rem] lg:px-10 lg:py-10 2xl:min-h-[34rem] 2xl:px-14 2xl:py-14">
       {event && colors && (
@@ -97,13 +99,15 @@ export function LargeNowHero({
           )}
         </div>
         <div className="flex items-center gap-3 text-base text-muted-foreground">
-          {member && colors ? (
+          {event && colors ? (
             <>
               <span
                 aria-hidden="true"
                 className={cn("h-3 w-3 rounded-full", colors.bg)}
               />
-              <span>{member.name}</span>
+              <span>
+                {eventAudienceLabel(event, members ?? (member ? [member] : []))}
+              </span>
             </>
           ) : (
             <>

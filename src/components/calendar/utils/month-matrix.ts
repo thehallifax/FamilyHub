@@ -1,3 +1,4 @@
+import { eventMemberIds } from "@/lib/event-audience";
 import { isEventOnDate } from "@/lib/time-utils";
 import type { CalendarEvent, FamilyColor, FamilyMember } from "@/lib/types";
 
@@ -33,7 +34,11 @@ export function selectMonthDayMembers(
     for (const day of uniqueEventDays(event)) {
       const key = day.toDateString();
       if (!dayMemberIds.has(key)) dayMemberIds.set(key, new Set());
-      dayMemberIds.get(key)?.add(event.memberId);
+      for (const id of event.audienceType === "FAMILY"
+        ? members.map((member) => member.id)
+        : eventMemberIds(event)) {
+        dayMemberIds.get(key)?.add(id);
+      }
     }
   }
 

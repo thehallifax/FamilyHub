@@ -104,7 +104,7 @@ describe("EventForm", () => {
       expect(screen.getByText("Date")).toBeInTheDocument();
       expect(screen.getByText("Start Time")).toBeInTheDocument();
       expect(screen.getByText("End Time")).toBeInTheDocument();
-      expect(screen.getByText("Assign To")).toBeInTheDocument();
+      expect(screen.getByText("Who is this for?")).toBeInTheDocument();
 
       // Check buttons
       expect(
@@ -167,7 +167,7 @@ describe("EventForm", () => {
         () => {
           expect(mockOnSubmit).toHaveBeenCalledWith(
             expect.objectContaining({
-              memberId: testMembers[0].id,
+              memberIds: [testMembers[0].id],
             }),
           );
         },
@@ -237,7 +237,7 @@ describe("EventForm", () => {
       // Should submit with the original member (testMembers[1])
       expect(mockOnSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
-          memberId: testMembers[1].id,
+          memberIds: [testMembers[1].id],
         }),
       );
     });
@@ -653,7 +653,7 @@ describe("EventForm", () => {
           expect(mockOnSubmit).toHaveBeenCalledWith(
             expect.objectContaining({
               title: "New Team Meeting",
-              memberId: testMembers[0].id,
+              memberIds: [testMembers[0].id],
             }),
           );
         },
@@ -1098,6 +1098,60 @@ describe("EventForm", () => {
   });
 
   describe("Member Selection", () => {
+    it("Everyone clears people and submits FAMILY", async () => {
+      const { user } = renderWithUser(
+        <EventForm
+          mode="edit"
+          defaultValues={timedEvent({
+            memberIds: [testMembers[0].id, testMembers[1].id],
+          })}
+          onSubmit={mockOnSubmit}
+          onCancel={mockOnCancel}
+        />,
+      );
+      await user.click(screen.getByRole("button", { name: "Everyone" }));
+      expect(screen.getByRole("button", { name: "Everyone" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      const submitted = await submitEditForm(user);
+      expect(submitted.audienceType).toBe("FAMILY");
+      expect(submitted.memberIds).toEqual([]);
+    });
+
+    it("selecting a person after Everyone switches to MEMBERS", async () => {
+      const { user } = renderWithUser(
+        <EventForm
+          mode="edit"
+          defaultValues={timedEvent({ audienceType: "FAMILY", memberIds: [] })}
+          onSubmit={mockOnSubmit}
+          onCancel={mockOnCancel}
+        />,
+      );
+      await user.click(
+        screen.getByRole("button", { name: testMembers[1].name }),
+      );
+      const submitted = await submitEditForm(user);
+      expect(submitted.audienceType).toBe("MEMBERS");
+      expect(submitted.memberIds).toEqual([testMembers[1].id]);
+    });
+
+    it("requires one person when Everyone is not selected", async () => {
+      const { user } = renderWithUser(
+        <EventForm
+          mode="edit"
+          defaultValues={timedEvent({ memberIds: [] })}
+          onSubmit={mockOnSubmit}
+          onCancel={mockOnCancel}
+        />,
+      );
+      await user.click(screen.getByRole("button", { name: /save changes/i }));
+      expect(
+        await screen.findByText("Choose Everyone or at least one person"),
+      ).toBeInTheDocument();
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
     it("allows changing selected family member", async () => {
       // Pass explicit defaultValues to avoid async initialization race condition
       const { user } = renderWithUser(
@@ -1112,7 +1166,7 @@ describe("EventForm", () => {
       // Wait for first member button to be visible AND selected
       await waitForMemberSelected(testMembers[0].name);
 
-      // Click on second member to change selection
+      // Click on second member to add them to the audience
       const secondMember = screen.getByRole("button", {
         name: testMembers[1].name,
       });
@@ -1132,7 +1186,7 @@ describe("EventForm", () => {
         () => {
           expect(mockOnSubmit).toHaveBeenCalledWith(
             expect.objectContaining({
-              memberId: testMembers[1].id,
+              memberIds: [testMembers[0].id, testMembers[1].id],
             }),
           );
         },

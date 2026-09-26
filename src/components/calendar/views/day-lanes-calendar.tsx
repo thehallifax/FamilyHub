@@ -1,6 +1,7 @@
 import { endOfMonth, startOfMonth } from "date-fns";
 import { useMemo, useRef } from "react";
 import { useCalendarEvents } from "@/api";
+import { eventAppliesTo, eventMatchesMembers } from "@/lib/event-audience";
 import {
   CALENDAR_START_HOUR,
   compareEventsByTime,
@@ -42,12 +43,18 @@ function isCurrentDay(date: Date): boolean {
   return date.toDateString() === new Date().toDateString();
 }
 
-function groupByMember(events: CalendarEvent[]): Map<string, CalendarEvent[]> {
+function groupByMember(
+  events: CalendarEvent[],
+  members: FamilyMember[],
+): Map<string, CalendarEvent[]> {
   const groups = new Map<string, CalendarEvent[]>();
   for (const event of events) {
-    const memberEvents = groups.get(event.memberId) ?? [];
-    memberEvents.push(event);
-    groups.set(event.memberId, memberEvents);
+    for (const member of members) {
+      if (!eventAppliesTo(event, member.id)) continue;
+      const memberEvents = groups.get(member.id) ?? [];
+      memberEvents.push(event);
+      groups.set(member.id, memberEvents);
+    }
   }
   return groups;
 }
@@ -58,7 +65,7 @@ function eventMatchesFilter(
   includeAllDay: boolean,
 ): boolean {
   return (
-    filter.selectedMembers.includes(event.memberId) &&
+    eventMatchesMembers(event, filter.selectedMembers) &&
     (includeAllDay || !event.isAllDay)
   );
 }
@@ -135,14 +142,16 @@ export function DayLanesCalendar({
     return {
       timedEventsByMember: groupByMember(
         dayEvents.filter((event) => !event.isAllDay),
+        members,
       ),
       allDayEventsByMember: groupByMember(
         filter.showAllDayEvents
           ? dayEvents.filter((event) => event.isAllDay)
           : [],
+        members,
       ),
     };
-  }, [events, currentDate, filter]);
+  }, [events, currentDate, filter, members]);
 
   return (
     <div className="flex min-h-0 flex-1 overflow-hidden bg-background">

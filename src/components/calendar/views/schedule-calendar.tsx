@@ -12,12 +12,18 @@ import { useMemo } from "react";
 import { useFamilyMembers } from "@/api";
 import { useIsLargeScreen, useIsMobile } from "@/hooks";
 import {
+  eventAudienceLabel,
+  eventColors,
+  eventMatchesMembers,
+  eventMemberIds,
+} from "@/lib/event-audience";
+import {
   compareEventsAllDayFirst,
   formatLocalDate,
   getEventKey,
   isEventOnDate,
 } from "@/lib/time-utils";
-import { type CalendarEvent, colorMap, getFamilyMember } from "@/lib/types";
+import { type CalendarEvent, getFamilyMember } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import type { FilterState } from "../components/calendar-filter";
 import {
@@ -77,7 +83,10 @@ function ScheduleCalendarCompact({
       const dayEvents = events
         .filter((event) => {
           const dateMatches = isEventOnDate(event, date);
-          const memberMatches = filter.selectedMembers.includes(event.memberId);
+          const memberMatches = eventMatchesMembers(
+            event,
+            filter.selectedMembers,
+          );
           const allDayMatches = filter.showAllDayEvents || !event.isAllDay;
           return dateMatches && memberMatches && allDayMatches;
         })
@@ -143,7 +152,16 @@ function ScheduleCalendarCompact({
               {/* Events list - simplified cards with colored left border */}
               <div className="space-y-2">
                 {dayEvents.map((event) => {
-                  const member = getFamilyMember(familyMembers, event.memberId);
+                  const colors = eventColors(event, familyMembers);
+                  const ids = eventMemberIds(event);
+                  const member =
+                    ids.length === 1
+                      ? getFamilyMember(familyMembers, ids[0])
+                      : undefined;
+                  const missingMember =
+                    event.audienceType !== "FAMILY" &&
+                    ids.length === 1 &&
+                    !member;
                   return (
                     <button
                       type="button"
@@ -157,9 +175,7 @@ function ScheduleCalendarCompact({
                       // colour at all. Reordering only swaps which background
                       // wins; an inline style is what twMerge cannot collapse.
                       style={{
-                        borderLeftColor: member
-                          ? colorMap[member.color].hex
-                          : undefined,
+                        borderLeftColor: missingMember ? undefined : colors.hex,
                       }}
                       className={cn(
                         "flex min-h-14 w-full cursor-pointer items-center rounded-xl p-3 text-left",
@@ -169,9 +185,9 @@ function ScheduleCalendarCompact({
                         // `border-muted-foreground` is a border utility, so the
                         // member-less row never had the collision and already
                         // rendered as intended. It keeps its shipped classes.
-                        member
-                          ? colorMap[member.color].light
-                          : "border-muted-foreground bg-muted",
+                        missingMember
+                          ? "border-muted-foreground bg-muted"
+                          : colors.light,
                       )}
                     >
                       <div className="flex min-w-0 flex-1 flex-col">
@@ -430,22 +446,29 @@ function ScheduleCalendarLarge({
 
               <div className="flex min-w-0 flex-col gap-2">
                 {row.events.map((event) => {
-                  const member = getFamilyMember(familyMembers, event.memberId);
+                  const colors = eventColors(event, familyMembers);
+                  const ids = eventMemberIds(event);
+                  const member =
+                    ids.length === 1
+                      ? getFamilyMember(familyMembers, ids[0])
+                      : undefined;
+                  const missingMember =
+                    event.audienceType !== "FAMILY" &&
+                    ids.length === 1 &&
+                    !member;
                   return (
                     <button
                       type="button"
                       key={getEventKey(event)}
                       onClick={() => onEventClick?.(event)}
                       style={{
-                        borderLeftColor: member
-                          ? colorMap[member.color].hex
-                          : undefined,
+                        borderLeftColor: missingMember ? undefined : colors.hex,
                       }}
                       className={cn(
                         "flex min-h-14 w-full cursor-pointer items-center gap-4 rounded-xl border-l-4 p-3 text-left",
                         "ring-1 ring-inset ring-black/5 transition-all hover:scale-[1.005] hover:shadow-md motion-reduce:transition-none motion-reduce:hover:scale-100",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
-                        member ? colorMap[member.color].light : "bg-muted",
+                        missingMember ? "bg-muted" : colors.light,
                       )}
                     >
                       <div className="min-w-0 max-w-[72ch] flex-1">
@@ -486,7 +509,7 @@ function ScheduleCalendarLarge({
                       */}
                       <span className="ml-auto flex shrink-0 items-center gap-2">
                         <span className="text-sm font-medium text-foreground">
-                          {member?.name ?? "Unknown member"}
+                          {eventAudienceLabel(event, familyMembers)}
                         </span>
                         {member && (
                           <MemberAvatar

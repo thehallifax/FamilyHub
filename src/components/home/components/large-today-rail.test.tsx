@@ -1,3 +1,4 @@
+import { within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { CalendarEvent, FamilyMember } from "@/lib/types";
 import { render, renderWithUser, screen } from "@/test/test-utils";
@@ -70,5 +71,59 @@ describe("LargeTodayRail", () => {
 
     await user.click(screen.getByRole("button", { name: /dentist/i }));
     expect(onSelect).toHaveBeenCalledWith(dentist);
+  });
+
+  it("keeps long Today and Coming up audience labels inside constrained rows", () => {
+    const sharedMembers: FamilyMember[] = [
+      { id: "m1", name: "Samuel", color: "coral" },
+      { id: "m2", name: "Isabella", color: "teal" },
+      { id: "m3", name: "Kathryn", color: "purple" },
+      {
+        id: "m4",
+        name: "James-With-An-Exceptionally-Long-Name",
+        color: "green",
+      },
+    ];
+    const sharedEvent = {
+      ...event("shared", "An unusually long family event title that must fit"),
+      audienceType: "MEMBERS" as const,
+      memberIds: sharedMembers.map((member) => member.id),
+    };
+    render(
+      <LargeTodayRail
+        currentDate={new Date(2026, 6, 5)}
+        todayItems={[sharedEvent]}
+        tomorrowItems={[{ ...sharedEvent, id: "tomorrow" }]}
+        members={sharedMembers}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    const fullAudience =
+      "Samuel + Isabella + Kathryn + James-With-An-Exceptionally-Long-Name";
+    expect(screen.getByRole("complementary")).toHaveClass("@container");
+    const rows = screen.getAllByRole("button", {
+      name: /an unusually long family event title/i,
+    });
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(row).toHaveClass("min-w-0");
+      expect(row).toHaveAccessibleName(
+        new RegExp(fullAudience.replaceAll("+", "\\+")),
+      );
+      expect(row.querySelector(".w-20")).toHaveTextContent("11:00 AM");
+      const title = row.querySelector(
+        "[title='An unusually long family event title that must fit']",
+      );
+      expect(title).toHaveClass("min-w-0", "truncate");
+      const audience = within(row).getByText(fullAudience);
+      expect(audience).toHaveAttribute("title", fullAudience);
+      expect(audience).toHaveClass(
+        "min-w-0",
+        "[overflow-wrap:anywhere]",
+        "@min-[28rem]:truncate",
+      );
+      expect(audience).not.toHaveClass("shrink-0");
+    }
   });
 });

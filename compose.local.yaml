@@ -3,7 +3,7 @@
 services:
   frontend:
     ports: !override
-      - "127.0.0.1:8080:80"
+      - "0.0.0.0:8080:80"
     volumes: !override
       - ./deploy/Caddyfile.local:/etc/caddy/Caddyfile:ro
     tmpfs:

@@ -1,6 +1,6 @@
 import { Sparkles } from "lucide-react";
+import { eventAudienceLabel, eventColors } from "@/lib/event-audience";
 import type { FamilyMember } from "@/lib/types";
-import { colorMap } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { getEventDateTime } from "../lib/event-time";
 import type { HeroState } from "../lib/hero-state";
@@ -56,15 +56,19 @@ function getTitle(state: HeroState): string {
 export function HeroCard({
   state,
   member,
+  members,
   now,
   onTap,
 }: {
   state: HeroState;
   member?: FamilyMember;
+  members?: FamilyMember[];
   now: Date;
   onTap?: () => void;
 }) {
-  const colors = member ? colorMap[member.color] : null;
+  const colors = isEventState(state)
+    ? eventColors(state.event, member ? [member] : [])
+    : null;
   const sectionLabel = getSectionLabel(state, now);
   const metaLine = getMetaLine(state, now);
   const title = getTitle(state);
@@ -104,6 +108,14 @@ export function HeroCard({
             {subtitle && (
               <p className="mt-2 text-[15px] leading-5 text-foreground/60">
                 {subtitle}
+              </p>
+            )}
+            {isEventState(state) && (
+              <p className="mt-2 text-sm font-medium text-foreground/60">
+                {eventAudienceLabel(
+                  state.event,
+                  members ?? (member ? [member] : []),
+                )}
               </p>
             )}
           </div>

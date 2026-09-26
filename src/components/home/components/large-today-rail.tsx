@@ -1,7 +1,7 @@
 import { format } from "date-fns";
+import { eventAudienceLabel, eventColors } from "@/lib/event-audience";
 import { getEventKey } from "@/lib/time-utils";
 import type { CalendarEvent, FamilyMember } from "@/lib/types";
-import { colorMap, getFamilyMember } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { formatEventTimeForDisplay } from "../lib/event-time";
 
@@ -14,17 +14,17 @@ function EventRow({
   members: FamilyMember[];
   onSelect: (event: CalendarEvent) => void;
 }) {
-  const member = getFamilyMember(members, event.memberId);
-  const colors = member ? colorMap[member.color] : colorMap.coral;
+  const colors = eventColors(event, members);
   const time = event.isAllDay
     ? "All day"
     : formatEventTimeForDisplay(event.startTime);
+  const audience = eventAudienceLabel(event, members);
 
   return (
     <button
       type="button"
       onClick={() => onSelect(event)}
-      className="flex min-h-14 w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="flex min-h-14 w-full min-w-0 items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
       <span
         aria-hidden="true"
@@ -33,14 +33,20 @@ function EventRow({
       <span className="w-20 shrink-0 text-sm font-medium text-foreground/60">
         {time}
       </span>
-      <span className="min-w-0 flex-1 truncate text-lg font-semibold leading-7 text-foreground">
-        {event.title}
-      </span>
-      {member && (
-        <span className="shrink-0 text-sm text-muted-foreground">
-          {member.name}
+      <span className="flex min-w-0 flex-1 flex-col @min-[28rem]:flex-row @min-[28rem]:items-baseline @min-[28rem]:gap-3">
+        <span
+          className="min-w-0 truncate text-lg font-semibold leading-7 text-foreground @min-[28rem]:flex-1"
+          title={event.title}
+        >
+          {event.title}
         </span>
-      )}
+        <span
+          className="min-w-0 text-sm text-muted-foreground [overflow-wrap:anywhere] @min-[28rem]:max-w-[50%] @min-[28rem]:truncate"
+          title={audience}
+        >
+          {audience}
+        </span>
+      </span>
     </button>
   );
 }
@@ -61,7 +67,7 @@ export function LargeTodayRail({
   onSelect: (event: CalendarEvent) => void;
 }) {
   return (
-    <aside className="flex min-h-0 flex-col gap-6 rounded-lg border border-border/70 bg-card px-5 py-5 shadow-sm">
+    <aside className="@container flex min-h-0 min-w-0 flex-col gap-6 rounded-lg border border-border/70 bg-card px-5 py-5 shadow-sm">
       <section>
         <div className="mb-4 flex items-baseline justify-between gap-3">
           <h3 className="text-2xl font-semibold leading-8 text-foreground">

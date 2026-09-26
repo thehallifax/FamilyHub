@@ -1,4 +1,4 @@
-# Household deployment (LAN HTTPS and loopback staging)
+# Household deployment (LAN HTTPS and local staging)
 
 The default production stack runs the built FamilyHub PWA and a reverse proxy
 in one Caddy container, our owned `family-hub-api` source build in a second
@@ -19,11 +19,10 @@ git -C family-hub-api remote add upstream https://github.com/joe-bor/family-hub-
 ```
 
 If the backend checkout already exists, use it; do not clone over it. For
-local staging with the current uncommitted Milestone 2B work, the backend
-checkout must be the sibling `../family-hub-api`. The base Compose file
-resolves that path from the frontend repository.
+local staging, the backend checkout must be the sibling `../family-hub-api`.
+The base Compose file resolves that path from the frontend repository.
 
-## MacBook local staging (HTTP, loopback only)
+## MacBook local staging (HTTP, trusted LAN)
 
 Use this mode to validate the **same three-container stack** without dealing
 with LAN certificates. First create `.env` and fill its secrets as described
@@ -38,19 +37,22 @@ docker compose -f compose.yaml -f compose.local.yaml ps
 curl -fsS http://localhost:8080/api/health
 ```
 
-Open `http://localhost:8080/` on the MacBook. Only Caddy is published, with
-host `127.0.0.1:8080` mapped to its plain HTTP container port 80; backend and
-PostgreSQL remain private. `/api` still goes through Caddy. `localhost` is a
-browser secure context for local PWA testing,
-but this HTTP mode is **not** for an iPad or any other LAN client. Google Calendar
-stays disabled unless credentials are deliberately supplied.
+Open `http://localhost:8080/` on the MacBook or
+`http://<MacBook-LAN-IP>:8080/` from a trusted LAN device. Only Caddy is
+published, with host `0.0.0.0:8080` mapped to its plain HTTP container port
+80; backend and PostgreSQL remain private. `/api` still goes through Caddy.
+Do not port-forward this development HTTP endpoint or use it on an untrusted
+network. `localhost` is a browser secure context, but plain HTTP at a LAN IP
+is not: the iPad can test the web UI, but service workers require a secure
+context, so HTTP LAN staging does not validate installed-PWA/offline behavior.
+Google Calendar stays disabled unless credentials are deliberately supplied.
 
 The local and production commands use the same Compose project and persistent
 database. Switching modes recreates affected containers but does not erase
 data. **Always include both `-f` arguments for local `up` commands**; running
 `docker compose up` with only the base file switches Caddy back to LAN HTTPS.
 Check `docker compose -f compose.yaml -f compose.local.yaml ps` after starting
-and confirm it shows `127.0.0.1:8080->80/tcp`, not a published `:443` port.
+and confirm it shows `0.0.0.0:8080->80/tcp`, not a published `:443` port.
 To return to the LAN HTTPS configuration, use the base file **alone**:
 
 ```sh

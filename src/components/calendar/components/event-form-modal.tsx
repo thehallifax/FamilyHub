@@ -5,6 +5,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useIsMobile } from "@/hooks";
+import { eventMemberIds } from "@/lib/event-audience";
 import { parseRRule } from "@/lib/recurrence-utils";
 import { format12hTo24h, formatLocalDate } from "@/lib/time-utils";
 import type { CalendarEvent } from "@/lib/types";
@@ -35,7 +36,9 @@ function eventToFormData(event: CalendarEvent): Partial<EventFormData> {
     endDate: event.endDate ? formatLocalDate(event.endDate) : undefined,
     startTime: format12hTo24h(event.startTime),
     endTime: format12hTo24h(event.endTime),
-    memberId: event.memberId,
+    memberId: event.memberId ?? undefined,
+    audienceType: event.audienceType ?? "MEMBERS",
+    memberIds: eventMemberIds(event),
     location: event.location ?? undefined,
     description: event.description ?? undefined,
     isAllDay: event.isAllDay,

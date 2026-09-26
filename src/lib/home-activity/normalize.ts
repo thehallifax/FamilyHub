@@ -20,7 +20,7 @@ export function buildSnapshot(
       endDate: e.endDate ? formatLocalDate(e.endDate) : undefined,
       isAllDay: e.isAllDay,
       location: e.location,
-      memberId: e.memberId,
+      memberId: e.memberId ?? undefined,
       recurringEventId: e.recurringEventId,
       entityId: e.id,
     };

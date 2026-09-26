@@ -11,6 +11,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFamilyMembers } from "@/api";
 import { useIsLargeScreen, useOnlineStatus } from "@/hooks";
 import {
+  eventColors,
+  eventMatchesMembers,
+  eventMemberIds,
+} from "@/lib/event-audience";
+import {
   compareEventsAllDayFirst,
   formatLocalDate,
   getEventKey,
@@ -149,7 +154,7 @@ function MonthlyCalendarCompact({
 
     // Iterate events against all days to support multi-day events
     for (const event of events) {
-      const memberMatches = filter.selectedMembers.includes(event.memberId);
+      const memberMatches = eventMatchesMembers(event, filter.selectedMembers);
       const allDayMatches = filter.showAllDayEvents || !event.isAllDay;
       if (!memberMatches || !allDayMatches) continue;
 
@@ -167,7 +172,15 @@ function MonthlyCalendarCompact({
 
     // Compute unique members for each day using O(1) lookup
     for (const dayInfo of data.values()) {
-      const memberIds = [...new Set(dayInfo.events.map((e) => e.memberId))];
+      const memberIds = [
+        ...new Set(
+          dayInfo.events.flatMap((e) =>
+            e.audienceType === "FAMILY"
+              ? familyMembers.map((m) => m.id)
+              : eventMemberIds(e),
+          ),
+        ),
+      ];
       dayInfo.members = memberIds
         .map((id) => getFamilyMember(familyMembers, id))
         .filter((m): m is FamilyMember => m !== undefined);
@@ -262,7 +275,7 @@ function MonthlyCalendarCompact({
               </div>
               <div className="space-y-0.5 sm:space-y-1">
                 {dayEvents.slice(0, 3).map((event) => {
-                  const member = getFamilyMember(familyMembers, event.memberId);
+                  const colors = eventColors(event, familyMembers);
                   return (
                     <button
                       type="button"
@@ -273,7 +286,7 @@ function MonthlyCalendarCompact({
                       }}
                       className={cn(
                         "text-xs px-1.5 py-1 sm:py-0.5 rounded text-left w-full min-h-[28px] sm:min-h-0 flex items-center gap-1",
-                        member ? colorMap[member.color]?.bg : "bg-muted",
+                        colors.bg,
                         "text-white font-medium",
                       )}
                     >
@@ -323,7 +336,7 @@ function MonthlyCalendarLarge({
     () =>
       events.filter(
         (event) =>
-          filter.selectedMembers.includes(event.memberId) &&
+          eventMatchesMembers(event, filter.selectedMembers) &&
           (filter.showAllDayEvents || !event.isAllDay),
       ),
     [events, filter.selectedMembers, filter.showAllDayEvents],

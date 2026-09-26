@@ -1,8 +1,8 @@
 import { format } from "date-fns";
 import { memo, useMemo } from "react";
+import { eventColors } from "@/lib/event-audience";
 import { formatLocalDate } from "@/lib/time-utils";
 import type { CalendarEvent, FamilyMember } from "@/lib/types";
-import { colorMap, getFamilyMember } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { formatEventTimeForDisplay, getEventDateTime } from "../lib/event-time";
 
@@ -55,8 +55,7 @@ export const ComingUp = memo(function ComingUp({
 
       <div className="space-y-2">
         {visibleEvents.map((event) => {
-          const member = getFamilyMember(members, event.memberId);
-          const colors = member ? colorMap[member.color] : colorMap.coral;
+          const colors = eventColors(event, members);
 
           return (
             <button

@@ -112,6 +112,7 @@ export function LargeHomeDashboard({
           <LargeNowHero
             state={heroState}
             member={heroMember}
+            members={members}
             now={now}
             onOpenEvent={openEvent}
           />

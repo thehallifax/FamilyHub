@@ -227,7 +227,10 @@ export function MobileHomeDashboard({
       endTime: format24hTo12h(formData.endTime),
       date: formData.date,
       endDate: formData.endDate ?? null,
-      memberId: formData.memberId,
+      memberId: formData.memberIds?.[0] ?? "",
+      audienceType: formData.audienceType ?? "MEMBERS",
+      memberIds:
+        formData.audienceType === "FAMILY" ? [] : (formData.memberIds ?? []),
       isAllDay: formData.isAllDay,
       location: formData.location,
       description: formData.description,
@@ -300,7 +303,10 @@ export function MobileHomeDashboard({
       endTime: format24hTo12h(formData.endTime),
       date: formData.date,
       endDate: formData.endDate ?? null,
-      memberId: formData.memberId,
+      memberId: formData.memberIds?.[0] ?? "",
+      audienceType: formData.audienceType ?? "MEMBERS",
+      memberIds:
+        formData.audienceType === "FAMILY" ? [] : (formData.memberIds ?? []),
       isAllDay: formData.isAllDay,
       location: formData.location,
       description: formData.description,
@@ -363,6 +369,7 @@ export function MobileHomeDashboard({
                 ? members.find((member) => member.id === heroEvent.memberId)
                 : undefined
             }
+            members={members}
             now={now}
             onTap={heroEvent ? () => handleEventClick(heroEvent) : undefined}
           />

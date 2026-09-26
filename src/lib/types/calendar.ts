@@ -5,7 +5,10 @@ export interface CalendarEvent {
   endTime: string;
   date: Date;
   endDate?: Date;
-  memberId: string;
+  memberId: string | null;
+  /** Explicit audience; memberId is a legacy single-member response alias. */
+  audienceType?: "FAMILY" | "MEMBERS";
+  memberIds?: string[];
   isAllDay: boolean;
   location?: string;
   recurrenceRule?: string;
@@ -42,6 +45,8 @@ export interface CreateEventRequest {
   date: string; // ISO string for API transport
   endDate?: string | null;
   memberId: string;
+  audienceType?: "FAMILY" | "MEMBERS";
+  memberIds?: string[];
   isAllDay?: boolean;
   location?: string;
   recurrenceRule?: string | null;
@@ -55,6 +60,8 @@ export interface UpdateEventRequest {
   date: string;
   endDate?: string | null;
   memberId: string;
+  audienceType?: "FAMILY" | "MEMBERS";
+  memberIds?: string[];
   isAllDay?: boolean;
   location?: string;
   recurrenceRule?: string | null;

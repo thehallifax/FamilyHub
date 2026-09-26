@@ -1,8 +1,8 @@
 import { format } from "date-fns";
 import { memo, useMemo } from "react";
+import { eventAudienceLabel, eventColors } from "@/lib/event-audience";
 import { formatLocalDate, getEventKey } from "@/lib/time-utils";
 import type { CalendarEvent, FamilyMember } from "@/lib/types";
-import { colorMap, getFamilyMember } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { formatEventTimeForDisplay, getEventDateTime } from "../lib/event-time";
 
@@ -58,8 +58,7 @@ export const TodayList = memo(function TodayList({
     <div className="px-4 pt-4">
       <div className="space-y-2">
         {visibleEvents.map((event) => {
-          const member = getFamilyMember(members, event.memberId);
-          const colors = member ? colorMap[member.color] : colorMap.coral;
+          const colors = eventColors(event, members);
           const affix = getSpanAffix(event, currentDate);
           // Under a cleared hero ("All clear for the rest of today") these events
           // are the ones already behind us, and were previously indistinguishable
@@ -75,7 +74,7 @@ export const TodayList = memo(function TodayList({
               onClick={() => onSelect(event)}
               data-past={isPast ? "true" : undefined}
               className={cn(
-                "flex min-h-12 w-full items-start gap-3 rounded-xl px-1 py-2.5 text-left transition-transform duration-[150ms] ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] motion-reduce:transition-none",
+                "flex min-h-12 w-full min-w-0 items-start gap-3 rounded-xl px-1 py-2.5 text-left transition-transform duration-[150ms] ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.98] motion-reduce:transition-none",
                 isPast && "opacity-60",
               )}
             >
@@ -93,7 +92,7 @@ export const TodayList = memo(function TodayList({
                       {formatEventTimeForDisplay(event.startTime)}
                     </span>
                   )}
-                  <span className="truncate text-[17px] leading-6 font-semibold text-foreground">
+                  <span className="min-w-0 truncate text-[17px] leading-6 font-semibold text-foreground">
                     {event.title}
                   </span>
                   {/* Opacity alone conveys nothing to assistive tech or to anyone
@@ -108,11 +107,11 @@ export const TodayList = memo(function TodayList({
                   )}
                 </div>
 
-                {(affix || event.location) && (
-                  <p className="mt-1 truncate text-sm leading-5 text-foreground/55">
-                    {[affix, event.location].filter(Boolean).join(" · ")}
-                  </p>
-                )}
+                <p className="mt-1 min-w-0 truncate text-sm leading-5 text-foreground/55">
+                  {[eventAudienceLabel(event, members), affix, event.location]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
               </div>
             </button>
           );

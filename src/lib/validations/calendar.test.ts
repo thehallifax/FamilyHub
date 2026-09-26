@@ -313,7 +313,7 @@ describe("calendar validations", () => {
         expect(result.success).toBe(false);
         if (!result.success) {
           expect(result.error.issues[0].message).toBe(
-            "Please select a family member",
+            "Choose Everyone or at least one person",
           );
         }
       });

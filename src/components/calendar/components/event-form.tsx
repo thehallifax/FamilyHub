@@ -9,10 +9,10 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { FormError } from "@/components/ui/form-error";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MemberSelector } from "@/components/ui/member-selector";
 import { TimePicker } from "@/components/ui/time-picker";
 import type { RecurrenceFrequency } from "@/lib/recurrence-utils";
 import { getSmartDefaultTimes, parseLocalDate } from "@/lib/time-utils";
+import { colorMap } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { type EventFormData, eventFormSchema } from "@/lib/validations";
 import { RecurrencePicker } from "./recurrence-picker";
@@ -90,16 +90,30 @@ function EventForm({
       date: format(new Date(), "yyyy-MM-dd"),
       startTime,
       endTime,
-      memberId: familyMembers[0]?.id ?? "",
+      audienceType: "MEMBERS",
+      memberIds: familyMembers[0] ? [familyMembers[0].id] : [],
     };
   }, [familyMembers]);
 
   // Use smart defaults for add mode, or provided defaults for edit mode
   const initialValues = useMemo(() => {
-    if (mode === "add") {
-      return { ...getAddModeDefaults, ...defaultValues };
+    const values =
+      mode === "add"
+        ? { ...getAddModeDefaults, ...defaultValues }
+        : { ...defaultValues };
+    if (values.audienceType !== "FAMILY") {
+      values.memberIds =
+        defaultValues?.memberIds ??
+        (defaultValues?.memberId
+          ? [defaultValues.memberId]
+          : (values.memberIds ?? []));
+      values.audienceType = "MEMBERS";
+    } else {
+      values.memberIds = [];
     }
-    return defaultValues || {};
+    // Legacy defaults are converted above and never participate in validation.
+    values.memberId = undefined;
+    return values;
   }, [mode, defaultValues, getAddModeDefaults]);
 
   const {
@@ -121,7 +135,8 @@ function EventForm({
   const endDateValue = watch("endDate");
   const startTimeValue = watch("startTime");
   const endTimeValue = watch("endTime");
-  const memberIdValue = watch("memberId");
+  const audienceTypeValue = watch("audienceType");
+  const memberIdsValue = watch("memberIds") ?? [];
   const isAllDayValue = watch("isAllDay");
   const recurrenceFrequency = watch("recurrenceFrequency");
   const recurrenceInterval = watch("recurrenceInterval");
@@ -393,16 +408,57 @@ function EventForm({
         </div>
       )}
 
-      {/* Family Member */}
+      {/* Event audience */}
       <div className="space-y-2">
-        <Label>Assign To</Label>
-        <MemberSelector
-          members={familyMembers}
-          value={memberIdValue || familyMembers[0]?.id || ""}
-          onChange={(memberId) => setValue("memberId", memberId)}
-          error={!!errors.memberId}
-        />
-        <FormError message={errors.memberId?.message} />
+        <fieldset className="flex flex-wrap gap-2">
+          <legend className="mb-2 text-[13px] leading-5 font-semibold">
+            Who is this for?
+          </legend>
+          <button
+            type="button"
+            aria-pressed={audienceTypeValue === "FAMILY"}
+            onClick={() => {
+              setValue("audienceType", "FAMILY", { shouldValidate: true });
+              setValue("memberIds", [], { shouldValidate: true });
+            }}
+            className={cn(
+              "min-h-11 rounded-full px-4 text-sm font-medium border transition-colors",
+              audienceTypeValue === "FAMILY"
+                ? "bg-slate-700 text-white border-slate-700"
+                : "bg-muted border-border",
+            )}
+          >
+            Everyone
+          </button>
+          {familyMembers.map((member) => {
+            const selected =
+              audienceTypeValue !== "FAMILY" &&
+              memberIdsValue.includes(member.id);
+            return (
+              <button
+                key={member.id}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => {
+                  const next = selected
+                    ? memberIdsValue.filter((id) => id !== member.id)
+                    : [...memberIdsValue, member.id];
+                  setValue("audienceType", "MEMBERS", { shouldValidate: true });
+                  setValue("memberIds", next, { shouldValidate: true });
+                }}
+                className={cn(
+                  "min-h-11 rounded-full px-4 text-sm font-medium border transition-colors",
+                  selected
+                    ? `${colorMap[member.color].bg} text-white border-transparent`
+                    : "bg-muted border-border",
+                )}
+              >
+                {member.name}
+              </button>
+            );
+          })}
+        </fieldset>
+        <FormError message={errors.memberIds?.message} />
       </div>
 
       {/* Details: Location + Description (collapsible) */}

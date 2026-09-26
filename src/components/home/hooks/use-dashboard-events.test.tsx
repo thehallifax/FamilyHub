@@ -170,4 +170,42 @@ describe("useDashboardEvents", () => {
       "tomorrow-a",
     ]);
   });
+
+  it("keeps FAMILY and shared events once in Home, including under a relevant member focus", async () => {
+    seedMockEvents([
+      createTestEventResponse({
+        id: "everyone",
+        title: "Zoo Lightscape",
+        date: "2026-04-25",
+        startTime: "10:00 AM",
+        endTime: "11:00 AM",
+        memberId: null,
+        audienceType: "FAMILY",
+        memberIds: [],
+      }),
+      createTestEventResponse({
+        id: "shared",
+        title: "Dentist",
+        date: "2026-04-25",
+        startTime: "11:00 AM",
+        endTime: "12:00 PM",
+        memberId: null,
+        audienceType: "MEMBERS",
+        memberIds: [testMembers[0].id, testMembers[1].id],
+      }),
+    ]);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: Infinity } },
+    });
+    const { result } = renderHook(
+      () =>
+        useDashboardEvents({ currentDate, memberFocusId: testMembers[0].id }),
+      { wrapper: createWrapper(queryClient) },
+    );
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.today.map((event) => event.id)).toEqual([
+      "everyone",
+      "shared",
+    ]);
+  });
 });

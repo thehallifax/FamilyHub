@@ -1,11 +1,16 @@
 import { useMemo, useRef } from "react";
 import { useFamilyMembers } from "@/api";
 import {
+  eventAppliesTo,
+  eventColors,
+  eventMatchesMembers,
+} from "@/lib/event-audience";
+import {
   compareEventsByTime,
   getEventKey,
   isEventOnDate,
 } from "@/lib/time-utils";
-import { type CalendarEvent, colorMap, getFamilyMember } from "@/lib/types";
+import { type CalendarEvent, colorMap } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { CalendarEventCard } from "../components/calendar-event";
 import type { FilterState } from "../components/calendar-filter";
@@ -47,7 +52,10 @@ export function DailyCalendar({
     return events
       .filter((event) => {
         const dateMatches = isEventOnDate(event, currentDate);
-        const memberMatches = filter.selectedMembers.includes(event.memberId);
+        const memberMatches = eventMatchesMembers(
+          event,
+          filter.selectedMembers,
+        );
         const allDayMatches = filter.showAllDayEvents || !event.isAllDay;
         return dateMatches && memberMatches && allDayMatches;
       })
@@ -83,7 +91,9 @@ export function DailyCalendar({
         >
           <div className="flex justify-center gap-2">
             {familyMembers.map((member) => {
-              const hasEvent = dayEvents.some((e) => e.memberId === member.id);
+              const hasEvent = dayEvents.some((e) =>
+                eventAppliesTo(e, member.id),
+              );
               return hasEvent ? (
                 <div key={member.id} className="flex items-center gap-1">
                   <div
@@ -112,8 +122,7 @@ export function DailyCalendar({
           </div>
           <div className="flex-1 flex flex-wrap gap-1.5 p-2">
             {allDayEvents.map((event) => {
-              const member = getFamilyMember(familyMembers, event.memberId);
-              const colors = member ? colorMap[member.color] : colorMap.coral;
+              const colors = eventColors(event, familyMembers);
               return (
                 <button
                   type="button"

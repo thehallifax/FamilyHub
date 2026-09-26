@@ -1,11 +1,6 @@
 import { LogOut, SlidersHorizontal, Users, X } from "lucide-react";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, lazy, Suspense, useEffect, useState } from "react";
 import { useFamilyMembers, useFamilyName, useLogout } from "@/api";
-import {
-  FamilySettingsModal,
-  MemberProfileModal,
-  PreferencesSheet,
-} from "@/components/settings";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,6 +15,23 @@ import { colorMap } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores";
 import { InstallAppRow } from "./install-app-row";
+import { ChunkLoadErrorBoundary } from "./lazy-module";
+
+const FamilySettingsModal = lazy(() =>
+  import("@/components/settings").then((module) => ({
+    default: module.FamilySettingsModal,
+  })),
+);
+const PreferencesSheet = lazy(() =>
+  import("@/components/settings").then((module) => ({
+    default: module.PreferencesSheet,
+  })),
+);
+const MemberProfileModal = lazy(() =>
+  import("@/components/settings").then((module) => ({
+    default: module.MemberProfileModal,
+  })),
+);
 
 export function SidebarMenu() {
   const isOpen = useAppStore((state) => state.isSidebarOpen);
@@ -32,6 +44,7 @@ export function SidebarMenu() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isPreferencesOpen, setIsPreferencesOpen] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
+  const [hasOpenedSettings, setHasOpenedSettings] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   useBackHandler(showSignOutConfirm, () => setShowSignOutConfirm(false));
 
@@ -40,6 +53,7 @@ export function SidebarMenu() {
       const autoOpenMemberId = sessionStorage.getItem("open-member-profile");
       if (autoOpenMemberId) {
         sessionStorage.removeItem("open-member-profile");
+        setHasOpenedSettings(true);
         setSelectedMemberId(autoOpenMemberId);
       }
     }
@@ -51,12 +65,18 @@ export function SidebarMenu() {
     {
       icon: Users,
       label: "Family Settings",
-      action: () => setIsSettingsOpen(true),
+      action: () => {
+        setHasOpenedSettings(true);
+        setIsSettingsOpen(true);
+      },
     },
     {
       icon: SlidersHorizontal,
       label: "Preferences",
-      action: () => setIsPreferencesOpen(true),
+      action: () => {
+        setHasOpenedSettings(true);
+        setIsPreferencesOpen(true);
+      },
     },
     {
       icon: LogOut,
@@ -104,7 +124,10 @@ export function SidebarMenu() {
                   <button
                     key={member.id}
                     type="button"
-                    onClick={() => setSelectedMemberId(member.id)}
+                    onClick={() => {
+                      setHasOpenedSettings(true);
+                      setSelectedMemberId(member.id);
+                    }}
                     onPointerDown={pressable.onPointerDown}
                     className={cn(
                       "w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-muted transition-colors",
@@ -174,25 +197,35 @@ export function SidebarMenu() {
         </div>
       </SideSheet>
 
-      {/* Family Settings Modal */}
-      <FamilySettingsModal
-        open={isSettingsOpen}
-        onOpenChange={setIsSettingsOpen}
-      />
-
-      {/* Preferences Sheet */}
-      <PreferencesSheet
-        open={isPreferencesOpen}
-        onOpenChange={setIsPreferencesOpen}
-      />
-
-      {/* Member Profile Modal */}
-      {selectedMemberId && (
-        <MemberProfileModal
-          open={!!selectedMemberId}
-          onOpenChange={(open) => !open && setSelectedMemberId(null)}
-          memberId={selectedMemberId}
-        />
+      {hasOpenedSettings && (
+        <ChunkLoadErrorBoundary label="settings">
+          <Suspense
+            fallback={
+              <div
+                role="status"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 text-muted-foreground"
+              >
+                Loading settings...
+              </div>
+            }
+          >
+            <FamilySettingsModal
+              open={isSettingsOpen}
+              onOpenChange={setIsSettingsOpen}
+            />
+            <PreferencesSheet
+              open={isPreferencesOpen}
+              onOpenChange={setIsPreferencesOpen}
+            />
+            {selectedMemberId && (
+              <MemberProfileModal
+                open={!!selectedMemberId}
+                onOpenChange={(open) => !open && setSelectedMemberId(null)}
+                memberId={selectedMemberId}
+              />
+            )}
+          </Suspense>
+        </ChunkLoadErrorBoundary>
       )}
 
       {/* Sign Out Confirmation */}

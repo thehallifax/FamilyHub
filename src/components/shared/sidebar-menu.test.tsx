@@ -52,7 +52,27 @@ describe("SidebarMenu", () => {
     await user.click(screen.getByRole("button", { name: "Preferences" }));
 
     expect(
-      screen.getByRole("dialog", { name: "Preferences" }),
+      await screen.findByRole("dialog", { name: "Preferences" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens Family Settings after loading the settings chunk", async () => {
+    const { user } = renderWithUser(<SidebarMenu />);
+
+    await user.click(screen.getByRole("button", { name: "Family Settings" }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "Family Settings" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens member profiles from the family list", async () => {
+    const { user } = renderWithUser(<SidebarMenu />);
+
+    await user.click(screen.getByRole("button", { name: /Alice/ }));
+
+    expect(
+      await screen.findByRole("dialog", { name: "Member Profile" }),
     ).toBeInTheDocument();
   });
 

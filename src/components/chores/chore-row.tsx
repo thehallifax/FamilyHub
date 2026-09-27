@@ -21,7 +21,8 @@ function cadenceLabel(cadence: ChoreBoardItem["cadence"]): string {
   if (cadence === "DAILY") return "Daily";
   if (cadence === "WEEKLY") return "Weekly";
   if (cadence === "FORTNIGHTLY") return "Fortnightly";
-  return "Monthly";
+  if (cadence === "MONTHLY") return "Monthly";
+  return "One-off";
 }
 
 const IMPLIED_BY: Record<ChoreCadence, ChoreScope> = {
@@ -29,10 +30,16 @@ const IMPLIED_BY: Record<ChoreCadence, ChoreScope> = {
   WEEKLY: "THIS_WEEK",
   FORTNIGHTLY: "TODAY", // Show the cadence within the shared This Week column.
   MONTHLY: "THIS_MONTH",
+  ONE_OFF: "THIS_MONTH",
 };
 
 export function choreDueLabel(chore: ChoreBoardItem): string | null {
-  if (chore.completed) return "Completed";
+  if (chore.completed) {
+    if (chore.cadence === "ONE_OFF" && chore.dueDate) {
+      return `Completed · ${format(parseLocalDate(chore.dueDate), "MMM d")}`;
+    }
+    return "Completed";
+  }
   if (chore.dueState === "UNSCHEDULED" || !chore.dueState) {
     if (chore.cadence === "WEEKLY") return "Any day this week";
     if (chore.cadence === "MONTHLY") return "Any day this month";

@@ -72,7 +72,9 @@ export function selectHomeAgendaChores(board: ChoresBoard): HomeAgendaChore[] {
   );
   const scheduled = scheduledChoresNeedingAttention(board).map((chore) => {
     const scope: ChoreScope =
-      chore.cadence === "MONTHLY" ? "THIS_MONTH" : "THIS_WEEK";
+      chore.cadence === "MONTHLY" || chore.cadence === "ONE_OFF"
+        ? "THIS_MONTH"
+        : "THIS_WEEK";
     const period = scope === "THIS_MONTH" ? board.thisMonth : board.thisWeek;
     return {
       chore,

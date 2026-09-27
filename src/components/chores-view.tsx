@@ -94,6 +94,7 @@ export function ChoresView() {
           dueWeekday: values.dueWeekday ?? null,
           dueDayOfMonth: values.dueDayOfMonth ?? null,
           recurrenceAnchorDate: values.recurrenceAnchorDate ?? null,
+          oneOffDueDate: values.oneOffDueDate ?? null,
         },
       });
       return;
@@ -107,6 +108,7 @@ export function ChoresView() {
       dueWeekday: values.dueWeekday ?? null,
       dueDayOfMonth: values.dueDayOfMonth ?? null,
       recurrenceAnchorDate: values.recurrenceAnchorDate ?? null,
+      oneOffDueDate: values.oneOffDueDate ?? null,
       activeFrom,
     });
   };
@@ -174,7 +176,7 @@ export function ChoresView() {
             {!isMobile && (
               <Button
                 type="button"
-                aria-label="Add recurring chore"
+                aria-label="Add chore"
                 size="icon"
                 disabled={!canCreate}
                 onClick={() => setCreateOpen(true)}
@@ -205,11 +207,11 @@ export function ChoresView() {
           {!isLoading && !isError && board && !hasRoutines && (
             <div className="rounded-lg border border-dashed border-border px-6 py-14 text-center">
               <h2 className="text-lg font-semibold text-foreground">
-                No recurring chores yet
+                No chores yet
               </h2>
               <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
-                Add a daily, weekly, fortnightly, or monthly routine to get
-                started.
+                Add a daily, weekly, fortnightly, monthly, or one-off chore to
+                get started.
               </p>
             </div>
           )}
@@ -299,6 +301,7 @@ export function ChoresView() {
                 dueWeekday: editingChore.dueWeekday ?? null,
                 dueDayOfMonth: editingChore.dueDayOfMonth ?? null,
                 recurrenceAnchorDate: editingChore.recurrenceAnchorDate ?? null,
+                oneOffDueDate: editingChore.oneOffDueDate ?? null,
               }
             : undefined
         }
@@ -306,7 +309,7 @@ export function ChoresView() {
 
       {isMobile && (
         <FloatingActionButton
-          label="Add recurring chore"
+          label="Add chore"
           disabled={!canCreate}
           onClick={() => setCreateOpen(true)}
         />

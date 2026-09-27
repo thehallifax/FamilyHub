@@ -2,6 +2,39 @@ import { describe, expect, it } from "vitest";
 import { choreFormSchema } from "./chores";
 
 describe("choreFormSchema", () => {
+  it("requires a valid due date only for one-off chores", () => {
+    expect(
+      choreFormSchema.safeParse({
+        title: "Renew passport",
+        assignedToMemberId: "member-1",
+        cadence: "ONE_OFF",
+        dueWeekday: null,
+        dueDayOfMonth: null,
+        recurrenceAnchorDate: null,
+        oneOffDueDate: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      choreFormSchema.safeParse({
+        title: "Renew passport",
+        assignedToMemberId: "member-1",
+        cadence: "ONE_OFF",
+        dueWeekday: null,
+        dueDayOfMonth: null,
+        recurrenceAnchorDate: null,
+        oneOffDueDate: "2026-10-12",
+      }).success,
+    ).toBe(true);
+    expect(
+      choreFormSchema.safeParse({
+        title: "Renew passport",
+        assignedToMemberId: "member-1",
+        cadence: "ONE_OFF",
+        dueWeekday: "MONDAY",
+        oneOffDueDate: "2026-10-12",
+      }).success,
+    ).toBe(false);
+  });
   it("requires title, assignee, and cadence", () => {
     const result = choreFormSchema.safeParse({
       title: "",

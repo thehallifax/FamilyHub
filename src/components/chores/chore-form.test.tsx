@@ -55,6 +55,7 @@ describe("ChoreForm", () => {
           dueWeekday: "TUESDAY",
           dueDayOfMonth: null,
           recurrenceAnchorDate: null,
+          oneOffDueDate: null,
         });
       },
       { timeout: TEST_TIMEOUTS.FORM_SUBMIT },
@@ -266,6 +267,87 @@ describe("ChoreForm", () => {
     await waitFor(() =>
       expect(onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({ dueDayOfMonth: 31 }),
+      ),
+    );
+  });
+
+  it("creates a one-off chore with only its required due date", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        defaultValues={{
+          title: "Renew passport",
+          assignedToMemberId: "member-1",
+          cadence: "DAILY",
+        }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "One-off" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "One-off" }));
+    expect(screen.getByLabelText("Due date")).toHaveClass("min-h-11");
+    expect(screen.queryByText("Due day")).not.toBeInTheDocument();
+    expect(screen.queryByText("Due day of month")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/starting/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Any day/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Choose a due date",
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await user.type(screen.getByLabelText("Due date"), "2026-10-12");
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cadence: "ONE_OFF",
+          oneOffDueDate: "2026-10-12",
+          dueWeekday: null,
+          dueDayOfMonth: null,
+          recurrenceAnchorDate: null,
+        }),
+      ),
+    );
+  });
+
+  it("edits a one-off date and clears it when converting to recurring", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        isEditing
+        defaultValues={{
+          title: "Renew passport",
+          assignedToMemberId: "member-1",
+          cadence: "ONE_OFF",
+          oneOffDueDate: "2026-10-12",
+        }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+    expect(screen.getByLabelText("Due date")).toHaveValue("2026-10-12");
+    await user.clear(screen.getByLabelText("Due date"));
+    await user.type(screen.getByLabelText("Due date"), "2026-10-20");
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ oneOffDueDate: "2026-10-20" }),
+      ),
+    );
+
+    onSubmit.mockClear();
+    await user.click(screen.getByRole("button", { name: "Weekly" }));
+    await user.click(screen.getByRole("button", { name: "Tuesday" }));
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cadence: "WEEKLY",
+          dueWeekday: "TUESDAY",
+          oneOffDueDate: null,
+        }),
       ),
     );
   });

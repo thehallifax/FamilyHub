@@ -214,6 +214,74 @@ describe("large home selectors", () => {
     ).toEqual(["Dentist", "Practice", "Pickup", "Dinner", "Bedtime"]);
   });
 
+  it("includes only due and overdue one-off chores using their fixed period", () => {
+    const board = choresBoard(0, 0);
+    const member = { id: "m1", name: "Pat", color: "coral" as const };
+    board.thisMonth.assignees = [
+      {
+        member,
+        summary: { total: 4, completed: 1, remaining: 3 },
+        chores: [
+          {
+            templateId: "due-one-off",
+            title: "Renew passport",
+            cadence: "ONE_OFF",
+            assignedToMemberId: "m1",
+            completed: false,
+            completedAt: null,
+            dueState: "DUE",
+            dueDate: "2026-07-05",
+            periodStartDate: "2026-07-05",
+          },
+          {
+            templateId: "overdue-one-off",
+            title: "Return library book",
+            cadence: "ONE_OFF",
+            assignedToMemberId: "m1",
+            completed: false,
+            completedAt: null,
+            dueState: "OVERDUE",
+            dueDate: "2026-07-04",
+            periodStartDate: "2026-07-04",
+          },
+          {
+            templateId: "future-one-off",
+            title: "Book service",
+            cadence: "ONE_OFF",
+            assignedToMemberId: "m1",
+            completed: false,
+            completedAt: null,
+            dueState: "UPCOMING",
+            dueDate: "2026-07-10",
+            periodStartDate: "2026-07-10",
+          },
+          {
+            templateId: "done-one-off",
+            title: "Submit form",
+            cadence: "ONE_OFF",
+            assignedToMemberId: "m1",
+            completed: true,
+            completedAt: "2026-07-03T10:00:00Z",
+            dueState: "COMPLETE",
+            dueDate: "2026-07-03",
+            periodStartDate: "2026-07-03",
+          },
+        ],
+      },
+    ];
+
+    expect(
+      selectHomeAgendaChores(board).map(({ chore, scope, periodStartDate }) => [
+        chore.templateId,
+        scope,
+        periodStartDate,
+      ]),
+    ).toEqual([
+      ["overdue-one-off", "THIS_MONTH", "2026-07-04"],
+      ["due-one-off", "THIS_MONTH", "2026-07-05"],
+    ]);
+  });
+
   it("derives chores remaining, done, empty, and unavailable states", () => {
     expect(
       deriveChoresSummary({

@@ -13,7 +13,7 @@ export const choreFormSchema = z
           .max(100, "Chore name must be 100 characters or less"),
       ),
     assignedToMemberId: z.string().min(1, "Assignee is required"),
-    cadence: z.enum(["DAILY", "WEEKLY", "FORTNIGHTLY", "MONTHLY"], {
+    cadence: z.enum(["DAILY", "WEEKLY", "FORTNIGHTLY", "MONTHLY", "ONE_OFF"], {
       message: "Cadence is required",
     }),
     dueWeekday: z
@@ -30,6 +30,7 @@ export const choreFormSchema = z
       .optional(),
     dueDayOfMonth: z.number().int().min(1).max(31).nullable().optional(),
     recurrenceAnchorDate: z.string().nullable().optional(),
+    oneOffDueDate: z.string().nullable().optional(),
   })
   .superRefine((value, context) => {
     if (
@@ -37,7 +38,8 @@ export const choreFormSchema = z
         value.cadence !== "FORTNIGHTLY" &&
         value.dueWeekday) ||
       (value.cadence !== "MONTHLY" && value.dueDayOfMonth) ||
-      (value.cadence !== "FORTNIGHTLY" && value.recurrenceAnchorDate)
+      (value.cadence !== "FORTNIGHTLY" && value.recurrenceAnchorDate) ||
+      (value.cadence !== "ONE_OFF" && value.oneOffDueDate)
     ) {
       context.addIssue({
         code: "custom",
@@ -80,6 +82,27 @@ export const choreFormSchema = z
             code: "custom",
             message: "Starting date must match the due day",
             path: ["recurrenceAnchorDate"],
+          });
+        }
+      }
+    }
+    if (value.cadence === "ONE_OFF") {
+      if (!value.oneOffDueDate) {
+        context.addIssue({
+          code: "custom",
+          message: "Choose a due date",
+          path: ["oneOffDueDate"],
+        });
+      } else {
+        const date = parseLocalDate(value.oneOffDueDate);
+        if (
+          !Number.isFinite(date.getTime()) ||
+          formatLocalDate(date) !== value.oneOffDueDate
+        ) {
+          context.addIssue({
+            code: "custom",
+            message: "Choose a valid due date",
+            path: ["oneOffDueDate"],
           });
         }
       }

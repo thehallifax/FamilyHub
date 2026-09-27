@@ -158,20 +158,18 @@ describe("ChoresView", () => {
     });
   });
 
-  it("disables creating a recurring routine while the board is loading", () => {
+  it("disables creating a chore while the board is loading", () => {
     server.use(
       http.get(`${API_BASE}/chores/board`, () => new Promise(() => undefined)),
     );
 
     render(<ChoresView />);
 
-    expect(
-      screen.getByRole("button", { name: /add recurring chore/i }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: /add chore/i })).toBeDisabled();
     expect(screen.getByText("Loading chores...")).toBeVisible();
   });
 
-  it("keeps recurring routine creation unavailable when the board fails to load", async () => {
+  it("keeps chore creation unavailable when the board fails to load", async () => {
     server.use(
       http.get(`${API_BASE}/chores/board`, () =>
         HttpResponse.json(
@@ -186,7 +184,7 @@ describe("ChoresView", () => {
       await screen.findByText("Could not load chores. Try again in a moment."),
     ).toBeVisible();
     const addButton = screen.getByRole("button", {
-      name: /add recurring chore/i,
+      name: /add chore/i,
     });
 
     expect(addButton).toBeDisabled();
@@ -236,12 +234,12 @@ describe("ChoresView", () => {
     expect(screen.getByRole("heading", { name: "This Month" })).toBeVisible();
   });
 
-  it("shows a family-level empty state when no recurring routines exist anywhere", async () => {
+  it("shows a family-level empty state when no chores exist anywhere", async () => {
     seedMockChoresBoard(emptyChoresBoard());
 
     render(<ChoresView />);
 
-    expect(await screen.findByText("No recurring chores yet")).toBeVisible();
+    expect(await screen.findByText("No chores yet")).toBeVisible();
   });
 
   it("shows a scope empty state when one timeframe has no routines", async () => {
@@ -301,9 +299,7 @@ describe("ChoresView", () => {
     seedMockChoresBoard(emptyChoresBoard());
     const { user } = renderWithUser(<ChoresView />);
 
-    await user.click(
-      await screen.findByRole("button", { name: /add recurring chore/i }),
-    );
+    await user.click(await screen.findByRole("button", { name: /add chore/i }));
     await waitForMemberSelected("Leo");
     await typeAndWait(
       user,
@@ -325,6 +321,59 @@ describe("ChoresView", () => {
         dueWeekday: "TUESDAY",
         dueDayOfMonth: null,
         recurrenceAnchorDate: null,
+        oneOffDueDate: null,
+        activeFrom: "2026-05-17",
+      });
+    });
+  });
+
+  it("creates a one-off chore with the explicit date payload", async () => {
+    let capturedCreateBody: CreateChoreTemplateRequest | null = null;
+    server.use(
+      http.post(`${API_BASE}/chores/templates`, async ({ request }) => {
+        capturedCreateBody =
+          (await request.json()) as CreateChoreTemplateRequest;
+        return HttpResponse.json(
+          {
+            data: {
+              id: "passport-id",
+              title: "Renew passport",
+              assignedToMemberId: "leo",
+              cadence: "ONE_OFF",
+              activeFrom: "2026-05-17",
+              oneOffDueDate: "2026-10-12",
+              archived: false,
+              createdAt: "2026-05-17T09:00:00Z",
+              updatedAt: "2026-05-17T09:00:00Z",
+            },
+          },
+          { status: 201 },
+        );
+      }),
+    );
+    seedMockChoresBoard(emptyChoresBoard());
+    const { user } = renderWithUser(<ChoresView />);
+
+    await user.click(await screen.findByRole("button", { name: /add chore/i }));
+    await waitForMemberSelected("Leo");
+    await typeAndWait(
+      user,
+      screen.getByLabelText(/chore name/i),
+      "Renew passport",
+    );
+    await user.click(screen.getByRole("button", { name: "One-off" }));
+    await user.type(screen.getByLabelText("Due date"), "2026-10-12");
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+
+    await waitFor(() => {
+      expect(capturedCreateBody).toEqual({
+        title: "Renew passport",
+        assignedToMemberId: "leo",
+        cadence: "ONE_OFF",
+        dueWeekday: null,
+        dueDayOfMonth: null,
+        recurrenceAnchorDate: null,
+        oneOffDueDate: "2026-10-12",
         activeFrom: "2026-05-17",
       });
     });
@@ -447,13 +496,13 @@ describe("ChoresView", () => {
       viewport.isMobile = false;
     });
 
-    it("shows a disabled Add recurring chore FAB on mobile that enables once the board loads", async () => {
+    it("shows a disabled Add chore FAB on mobile that enables once the board loads", async () => {
       viewport.isMobile = true;
       seedMockChoresBoard(emptyChoresBoard());
       renderWithUser(<ChoresView />);
       // Query synchronously on the initial render: the board is still loading,
       // so the module-specific canCreate rule should render the FAB disabled.
-      const fab = screen.getByRole("button", { name: "Add recurring chore" });
+      const fab = screen.getByRole("button", { name: "Add chore" });
       // The floating action button is fixed-positioned; the desktop icon
       // button is not — this is what distinguishes the FAB from the old control.
       expect(fab).toHaveClass("fixed");
@@ -462,12 +511,12 @@ describe("ChoresView", () => {
       await waitFor(() => expect(fab).toBeEnabled());
     });
 
-    it("renders exactly one Add recurring chore control on desktop, not a FAB", async () => {
+    it("renders exactly one Add chore control on desktop, not a FAB", async () => {
       viewport.isMobile = false;
       seedMockChoresBoard(emptyChoresBoard());
       renderWithUser(<ChoresView />);
       const controls = await screen.findAllByRole("button", {
-        name: "Add recurring chore",
+        name: "Add chore",
       });
       expect(controls).toHaveLength(1);
       // Desktop keeps the inline icon button, never the floating action button.
@@ -654,6 +703,64 @@ describe("ChoresView", () => {
         cadence: "WEEKLY",
         dueWeekday: null,
         dueDayOfMonth: null,
+      }),
+    );
+  });
+
+  it("edits a one-off chore without sending recurrence fields", async () => {
+    const board = sampleChoresBoard();
+    board.thisMonth.assignees[0].chores[0] = {
+      ...board.thisMonth.assignees[0].chores[0],
+      templateId: "passport-id",
+      title: "Renew passport",
+      cadence: "ONE_OFF",
+      completed: false,
+      completedAt: null,
+      dueDate: "2026-10-12",
+      oneOffDueDate: "2026-10-12",
+      dueState: "UPCOMING",
+      periodStartDate: "2026-10-12",
+      periodEndDate: "2026-10-12",
+    };
+    let updated: UpdateChoreTemplateRequest | null = null;
+    server.use(
+      http.patch(
+        `${API_BASE}/chores/templates/passport-id`,
+        async ({ request }) => {
+          updated = (await request.json()) as UpdateChoreTemplateRequest;
+          return HttpResponse.json({
+            data: {
+              id: "passport-id",
+              ...updated,
+              activeFrom: "2026-05-17",
+              archived: false,
+              createdAt: "2026-05-17T08:00:00Z",
+              updatedAt: "2026-05-17T09:00:00Z",
+            },
+          });
+        },
+      ),
+    );
+    seedMockChoresBoard(board);
+    const { user } = renderWithUser(<ChoresView />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Edit Renew passport" }),
+    );
+    expect(screen.getByLabelText("Due date")).toHaveValue("2026-10-12");
+    await user.clear(screen.getByLabelText("Due date"));
+    await user.type(screen.getByLabelText("Due date"), "2026-10-20");
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+
+    await waitFor(() =>
+      expect(updated).toEqual({
+        title: "Renew passport",
+        assignedToMemberId: "maya",
+        cadence: "ONE_OFF",
+        dueWeekday: null,
+        dueDayOfMonth: null,
+        recurrenceAnchorDate: null,
+        oneOffDueDate: "2026-10-20",
       }),
     );
   });

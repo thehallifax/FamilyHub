@@ -1908,6 +1908,10 @@ export const handlers = [
       archived: false,
       createdAt: now,
       updatedAt: now,
+      dueWeekday: body.dueWeekday ?? null,
+      dueDayOfMonth: body.dueDayOfMonth ?? null,
+      recurrenceAnchorDate: body.recurrenceAnchorDate ?? null,
+      oneOffDueDate: body.oneOffDueDate ?? null,
     };
 
     return HttpResponse.json(
@@ -1936,6 +1940,10 @@ export const handlers = [
         archived: body.archived ?? false,
         createdAt: "2026-05-17T08:00:00Z",
         updatedAt: "2026-05-17T09:00:00Z",
+        dueWeekday: body.dueWeekday ?? null,
+        dueDayOfMonth: body.dueDayOfMonth ?? null,
+        recurrenceAnchorDate: body.recurrenceAnchorDate ?? null,
+        oneOffDueDate: body.oneOffDueDate ?? null,
       };
 
       return HttpResponse.json(

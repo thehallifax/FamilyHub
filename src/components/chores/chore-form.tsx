@@ -39,6 +39,7 @@ export function ChoreForm({
   const defaultDueWeekday = defaultValues?.dueWeekday;
   const defaultDueDayOfMonth = defaultValues?.dueDayOfMonth;
   const defaultRecurrenceAnchorDate = defaultValues?.recurrenceAnchorDate;
+  const defaultOneOffDueDate = defaultValues?.oneOffDueDate;
   const [cadenceChanged, setCadenceChanged] = useState(false);
 
   const initialValues = useMemo(
@@ -50,6 +51,7 @@ export function ChoreForm({
       dueWeekday: defaultDueWeekday ?? null,
       dueDayOfMonth: defaultDueDayOfMonth ?? null,
       recurrenceAnchorDate: defaultRecurrenceAnchorDate ?? null,
+      oneOffDueDate: defaultOneOffDueDate ?? null,
     }),
     [
       defaultTitle,
@@ -58,6 +60,7 @@ export function ChoreForm({
       defaultDueWeekday,
       defaultDueDayOfMonth,
       defaultRecurrenceAnchorDate,
+      defaultOneOffDueDate,
       familyMembers,
     ],
   );
@@ -124,6 +127,7 @@ export function ChoreForm({
     { value: "WEEKLY", label: "Weekly" },
     { value: "FORTNIGHTLY", label: "Fortnightly" },
     { value: "MONTHLY", label: "Monthly" },
+    { value: "ONE_OFF", label: "One-off" },
   ];
 
   return (
@@ -161,8 +165,8 @@ export function ChoreForm({
       </div>
 
       <div className="space-y-2">
-        <Label>Repeats</Label>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Label>Schedule</Label>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           {cadenceOptions.map((option) => (
             <Button
               key={option.value}
@@ -175,10 +179,12 @@ export function ChoreForm({
                   setValue("dueWeekday", null);
                   setValue("dueDayOfMonth", null);
                   setValue("recurrenceAnchorDate", null);
+                  setValue("oneOffDueDate", null);
                   clearErrors([
                     "dueWeekday",
                     "dueDayOfMonth",
                     "recurrenceAnchorDate",
+                    "oneOffDueDate",
                   ]);
                 }
                 setValue("cadence", option.value, {
@@ -284,6 +290,22 @@ export function ChoreForm({
           <p className="text-xs text-muted-foreground">
             Days beyond month end are due on the last day of that month.
           </p>
+        </div>
+      )}
+      {cadence === "ONE_OFF" && (
+        <div className="space-y-2">
+          <Label htmlFor="chore-one-off-due-date">Due date</Label>
+          <Input
+            id="chore-one-off-due-date"
+            type="date"
+            {...register("oneOffDueDate")}
+            className={cn(
+              "min-h-11 bg-input",
+              errors.oneOffDueDate && "border-destructive",
+            )}
+            aria-invalid={!!errors.oneOffDueDate}
+          />
+          <FormError message={errors.oneOffDueDate?.message} />
         </div>
       )}
 

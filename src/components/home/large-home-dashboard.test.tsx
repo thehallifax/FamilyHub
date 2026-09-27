@@ -1,7 +1,11 @@
 import { fireEvent, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ChoreBoardItem, ChoresBoard } from "@/lib/types";
+import type {
+  ChoreBoardItem,
+  ChoresBoard,
+  UpdateCurrentPeriodCompletionRequest,
+} from "@/lib/types";
 import { useAppStore } from "@/stores";
 import { createTestEventResponse } from "@/test/fixtures";
 import {
@@ -174,5 +178,53 @@ describe("large Home agenda", () => {
     expect(
       await screen.findByRole("button", { name: "Complete Dishes" }),
     ).toBeEnabled();
+  });
+
+  it("completes a due one-off using its permanent fixed period", async () => {
+    const board = seedBoard();
+    board.thisMonth.assignees[0].chores = [
+      {
+        ...chore("Renew passport", "ONE_OFF", "DUE"),
+        dueDate: "2026-07-05",
+        oneOffDueDate: "2026-07-05",
+        periodStartDate: "2026-07-05",
+        periodEndDate: "2026-07-05",
+      },
+    ];
+    seedMockChoresBoard(board);
+    let submitted: UpdateCurrentPeriodCompletionRequest | null = null;
+    server.use(
+      http.put(
+        `${API_BASE}/chores/templates/:id/current-period-completion`,
+        async ({ request }) => {
+          submitted =
+            (await request.json()) as UpdateCurrentPeriodCompletionRequest;
+          return HttpResponse.json({
+            data: {
+              scope: "THIS_MONTH",
+              periodStartDate: "2026-07-05",
+              periodEndDate: "2026-07-05",
+              item: {
+                ...board.thisMonth.assignees[0].chores[0],
+                completed: true,
+                dueState: "COMPLETE",
+                completedAt: "2026-07-05T09:00:00Z",
+              },
+            },
+          });
+        },
+      ),
+    );
+    const { user } = renderWithUser(<LargeHomeDashboard nowOverride={now} />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Complete Renew passport" }),
+    );
+    await waitFor(() =>
+      expect(submitted).toEqual({
+        scope: "THIS_MONTH",
+        periodStartDate: "2026-07-05",
+      }),
+    );
   });
 });

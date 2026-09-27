@@ -136,6 +136,30 @@ it("keeps edit separate from completion and preserves legacy any-day labels", as
   expect(onComplete).not.toHaveBeenCalled();
 });
 
+it("shows a one-off's explicit due date without implying another occurrence", () => {
+  const oneOff = {
+    ...baseChore,
+    cadence: "ONE_OFF" as const,
+    dueDate: "2026-10-12",
+    oneOffDueDate: "2026-10-12",
+    dueState: "UPCOMING" as const,
+  };
+  const { rerender } = render(
+    <ChoreRow chore={oneOff} activeScope="THIS_MONTH" />,
+  );
+  expect(screen.getByText("Due Oct 12")).toBeVisible();
+  expect(screen.queryByText("One-off")).not.toBeInTheDocument();
+
+  rerender(
+    <ChoreRow
+      chore={{ ...oneOff, completed: true, dueState: "COMPLETE" }}
+      activeScope="THIS_MONTH"
+    />,
+  );
+  expect(screen.getByText("Completed · Oct 12")).toBeVisible();
+  expect(screen.queryByText(/next/i)).not.toBeInTheDocument();
+});
+
 describe("ChoreRow cadence label", () => {
   it("hides the cadence label when the active scope already implies it", () => {
     render(

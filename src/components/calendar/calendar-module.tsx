@@ -7,15 +7,19 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   useCalendarEvents,
   useCreateEvent,
+  useCreateGoogleEvent,
   useDeleteEvent,
+  useDeleteGoogleEvent,
   useDeleteInstance,
   useFamilyMemberMap,
   useFamilyMembers,
+  useGoogleWriteDestinations,
   useUpdateEvent,
+  useUpdateGoogleEvent,
   useUpdateInstance,
 } from "@/api";
 import type { ApiException } from "@/api/client";
@@ -125,6 +129,19 @@ export function CalendarModule() {
     openDetailModal,
     closeDetailModal,
   } = useEventDetailState();
+  const { data: googleWriteDestinations } = useGoogleWriteDestinations(
+    isDetailModalOpen && selectedEvent?.source === "GOOGLE",
+  );
+  const canDeleteSelectedGoogleEvent = Boolean(
+    selectedEvent?.source === "GOOGLE" &&
+      !selectedEvent.isRecurring &&
+      selectedEvent.syncedCalendarId &&
+      googleWriteDestinations?.data.destinations.some(
+        (destination) =>
+          destination.syncedCalendarId === selectedEvent.syncedCalendarId,
+      ),
+  );
+  const canEditSelectedGoogleEvent = canDeleteSelectedGoogleEvent;
 
   // Edit modal state
   const { editingEvent, isEditModalOpen, openEditModal, closeEditModal } =
@@ -233,11 +250,30 @@ export function CalendarModule() {
   const rawEvents = useMemo(() => eventsResponse?.data ?? [], [eventsResponse]);
 
   // Mutations
+  const googleRequestId = useRef<string>(crypto.randomUUID());
   const createEvent = useCreateEvent({
     onSuccess: () => {
+      googleRequestId.current = crypto.randomUUID();
       closeAddEventModal();
     },
     onError: notifyOfflineWrite,
+  });
+  const createGoogleEvent = useCreateGoogleEvent({
+    onSuccess: () => {
+      googleRequestId.current = crypto.randomUUID();
+      closeAddEventModal();
+    },
+    onError: (error) => {
+      notifyOfflineWrite(error);
+      toast({
+        title:
+          error.status === 503
+            ? "Check Google before retrying"
+            : "Could not create Google event",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const deleteEvent = useDeleteEvent({
@@ -245,12 +281,34 @@ export function CalendarModule() {
       closeDetailModal();
     },
   });
+  const deleteGoogleEvent = useDeleteGoogleEvent({
+    onSuccess: () => {
+      closeDetailModal();
+    },
+    onError: notifyOfflineWrite,
+  });
 
   const updateEvent = useUpdateEvent({
     onSuccess: () => {
       closeEditModal();
     },
     onError: notifyOfflineWrite,
+  });
+  const updateGoogleEvent = useUpdateGoogleEvent({
+    onSuccess: () => closeEditModal(),
+    onError: (error) => {
+      notifyOfflineWrite(error);
+      toast({
+        title:
+          error.status === 409
+            ? "Event changed in Google"
+            : error.status === 503
+              ? "Check Google before retrying"
+              : "Could not update Google event",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const updateInstance = useUpdateInstance({
@@ -328,6 +386,7 @@ export function CalendarModule() {
 
   const handleEventClick = (event: CalendarEvent) => {
     deleteEvent.reset();
+    deleteGoogleEvent.reset();
     deleteInstance.reset();
     openDetailModal(event);
   };
@@ -335,12 +394,9 @@ export function CalendarModule() {
   const handleDeleteEvent = () => {
     if (!selectedEvent) return;
 
-    // Guard: Google events are read-only
     if (selectedEvent.source === "GOOGLE") {
-      toast({
-        title: "Synced from Google Calendar",
-        description: "Delete this event in Google Calendar.",
-      });
+      if (selectedEvent.isRecurring || !selectedEvent.id) return;
+      deleteGoogleEvent.mutate(selectedEvent.id);
       return;
     }
 
@@ -356,12 +412,9 @@ export function CalendarModule() {
   const handleEditClick = () => {
     if (!selectedEvent) return;
 
-    // Guard: Google events are read-only
     if (selectedEvent.source === "GOOGLE") {
-      toast({
-        title: "Synced from Google Calendar",
-        description: "Edit this event in Google Calendar.",
-      });
+      if (!canEditSelectedGoogleEvent || selectedEvent.isRecurring) return;
+      openEditModal(selectedEvent);
       return;
     }
 
@@ -412,6 +465,12 @@ export function CalendarModule() {
       location: formData.location,
       description: formData.description,
     };
+
+    if (currentEditingEvent.source === "GOOGLE") {
+      if (!currentEditingEvent.id || currentEditingEvent.isRecurring) return;
+      updateGoogleEvent.mutate({ id: currentEditingEvent.id, event: request });
+      return;
+    }
 
     if (currentEditingEvent.isRecurring && editScope === "this") {
       // "This event" — always use instance endpoint
@@ -475,7 +534,19 @@ export function CalendarModule() {
       description: formData.description,
       recurrenceRule,
     };
-    createEvent.mutate(request);
+    if (formData.destination && formData.destination !== "native") {
+      const [sourceOwnerMemberId, syncedCalendarId] =
+        formData.destination.split(":");
+      if (!sourceOwnerMemberId || !syncedCalendarId) return;
+      createGoogleEvent.mutate({
+        sourceOwnerMemberId,
+        syncedCalendarId,
+        clientRequestId: googleRequestId.current,
+        event: request,
+      });
+    } else {
+      createEvent.mutate(request);
+    }
   };
 
   const commonProps = {
@@ -638,9 +709,12 @@ export function CalendarModule() {
       <EventFormModal
         mode="add"
         isOpen={isAddEventModalOpen}
-        onClose={closeAddEventModal}
+        onClose={() => {
+          googleRequestId.current = crypto.randomUUID();
+          closeAddEventModal();
+        }}
         onSubmit={handleAddEvent}
-        isPending={createEvent.isPending}
+        isPending={createEvent.isPending || createGoogleEvent.isPending}
       />
 
       {/* Edit Event Modal */}
@@ -652,7 +726,11 @@ export function CalendarModule() {
           setEditScope(null);
         }}
         onSubmit={handleUpdateEvent}
-        isPending={updateEvent.isPending || updateInstance.isPending}
+        isPending={
+          updateEvent.isPending ||
+          updateGoogleEvent.isPending ||
+          updateInstance.isPending
+        }
         event={editingEvent ?? undefined}
         showRecurrencePicker={editScope !== "this"}
       />
@@ -664,10 +742,18 @@ export function CalendarModule() {
         onClose={closeDetailModal}
         onEdit={handleEditClick}
         onDelete={handleDeleteEvent}
-        isDeleting={deleteEvent.isPending || deleteInstance.isPending}
-        deleteError={
-          deleteEvent.error?.message ?? deleteInstance.error?.message
+        isDeleting={
+          deleteEvent.isPending ||
+          deleteGoogleEvent.isPending ||
+          deleteInstance.isPending
         }
+        deleteError={
+          deleteEvent.error?.message ??
+          deleteGoogleEvent.error?.message ??
+          deleteInstance.error?.message
+        }
+        canDeleteGoogleEvent={canDeleteSelectedGoogleEvent}
+        canEditGoogleEvent={canEditSelectedGoogleEvent}
       />
 
       {/* Scope Dialog for Recurring Events */}

@@ -176,6 +176,128 @@ describe("CalendarModule", () => {
   });
 
   describe("Add Event Flow", () => {
+    it("creates into an eligible Google calendar once and refreshes without a native duplicate", async () => {
+      seedMockEvents([]);
+      let googlePosts = 0;
+      let nativePosts = 0;
+      server.use(
+        http.get(`${API_BASE}/google/events/destinations`, () =>
+          HttpResponse.json({
+            data: {
+              destinations: [
+                {
+                  syncedCalendarId: "calendar-1",
+                  memberId: testMembers[0].id,
+                  memberName: "James",
+                  calendarName: "Personal",
+                  accessRole: "owner",
+                },
+              ],
+              reconnectMemberIds: [],
+              unavailableMemberIds: [],
+            },
+          }),
+        ),
+        http.post(`${API_BASE}/calendar/events`, () => {
+          nativePosts++;
+          return HttpResponse.json({ message: "wrong path" }, { status: 500 });
+        }),
+        http.post(`${API_BASE}/google/events`, async ({ request }) => {
+          googlePosts++;
+          const body = (await request.json()) as {
+            event: { title: string; audienceType: string };
+          };
+          expect(body.event.audienceType).toBe("MEMBERS");
+          const created = createTestEventResponse({
+            title: body.event.title,
+            source: "GOOGLE",
+          });
+          seedMockEvents([created]);
+          return HttpResponse.json({ data: created });
+        }),
+      );
+      const { user } = renderWithUser(<CalendarModule />);
+      await waitFor(() =>
+        expect(screen.queryByText("Loading events...")).not.toBeInTheDocument(),
+      );
+      await user.click(screen.getByRole("button", { name: /add event/i }));
+      await waitForMemberSelected(testMembers[0].name);
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: "Save to" }),
+        `${testMembers[0].id}:calendar-1`,
+      );
+      await typeAndWait(
+        user,
+        screen.getByLabelText(/event name/i),
+        "Google Test Event",
+      );
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: /add event/i,
+        }),
+      );
+      await waitFor(() => expect(googlePosts).toBe(1));
+      expect(nativePosts).toBe(0);
+      expect(getMockEvents()).toHaveLength(1);
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+    });
+
+    it("keeps the form open and shows a useful Google write failure", async () => {
+      server.use(
+        http.get(`${API_BASE}/google/events/destinations`, () =>
+          HttpResponse.json({
+            data: {
+              destinations: [
+                {
+                  syncedCalendarId: "calendar-1",
+                  memberId: testMembers[0].id,
+                  memberName: "James",
+                  calendarName: "Personal",
+                  accessRole: "writer",
+                },
+              ],
+              reconnectMemberIds: [],
+              unavailableMemberIds: [],
+            },
+          }),
+        ),
+        http.post(`${API_BASE}/google/events`, () =>
+          HttpResponse.json(
+            {
+              message:
+                "Reconnect this Google account to grant event write permission",
+            },
+            { status: 400 },
+          ),
+        ),
+      );
+      const { user } = renderWithUser(<CalendarModule />);
+      await waitFor(() =>
+        expect(screen.queryByText("Loading events...")).not.toBeInTheDocument(),
+      );
+      await user.click(screen.getByRole("button", { name: /add event/i }));
+      await waitForMemberSelected(testMembers[0].name);
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: "Save to" }),
+        `${testMembers[0].id}:calendar-1`,
+      );
+      await typeAndWait(
+        user,
+        screen.getByLabelText(/event name/i),
+        "Failed Google Event",
+      );
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: /add event/i,
+        }),
+      );
+      await waitFor(() =>
+        expect(screen.getByRole("dialog")).toBeInTheDocument(),
+      );
+      expect(getMockEvents()).toHaveLength(0);
+    });
     it("opens add event modal when FAB clicked", async () => {
       seedMockEvents([]);
 
@@ -482,6 +604,122 @@ describe("CalendarModule", () => {
       });
     });
 
+    it("edits a writable ordinary Google event without using the native endpoint", async () => {
+      const event = createTestEventResponse({
+        id: "google-row",
+        title: "Google original",
+        source: "GOOGLE",
+        syncedCalendarId: "calendar-1",
+        audienceType: "MEMBERS",
+        memberIds: [testMembers[0].id],
+      });
+      seedMockEvents([event]);
+      let googlePuts = 0;
+      let nativePuts = 0;
+      server.use(
+        http.get(`${API_BASE}/google/events/destinations`, () =>
+          HttpResponse.json({
+            data: {
+              destinations: [
+                {
+                  syncedCalendarId: "calendar-1",
+                  memberId: testMembers[0].id,
+                  memberName: "James",
+                  calendarName: "Personal",
+                  accessRole: "owner",
+                },
+              ],
+              reconnectMemberIds: [],
+              unavailableMemberIds: [],
+            },
+          }),
+        ),
+        http.put(`${API_BASE}/google/events/:id`, async ({ request }) => {
+          googlePuts++;
+          const body = (await request.json()) as { event: { title: string } };
+          const updated = createTestEventResponse({
+            ...event,
+            title: body.event.title,
+          });
+          seedMockEvents([updated]);
+          return HttpResponse.json({ data: updated });
+        }),
+        http.put(`${API_BASE}/calendar/events/:id`, () => {
+          nativePuts++;
+          return HttpResponse.json({}, { status: 500 });
+        }),
+      );
+
+      const { user } = renderWithUser(<CalendarModule />);
+      await user.click(await screen.findByText("Google original"));
+      const edit = await screen.findByRole("button", { name: "Edit" });
+      await waitFor(() => expect(edit).toBeEnabled());
+      await user.click(edit);
+      expect(screen.getByText(/Save to: Google Calendar/i)).toBeInTheDocument();
+      expect(screen.queryByRole("combobox", { name: "Save to" })).toBeNull();
+      expect(screen.getByText("Who is this for?")).toBeInTheDocument();
+      const title = screen.getByLabelText(/event name/i);
+      await user.clear(title);
+      await user.type(title, "Google updated");
+      await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+      await waitFor(() => expect(googlePuts).toBe(1));
+      expect(nativePuts).toBe(0);
+      await waitFor(() =>
+        expect(screen.getByText("Google updated")).toBeVisible(),
+      );
+    });
+
+    it("keeps the Google edit form open when an external-change conflict occurs", async () => {
+      let googlePuts = 0;
+      const event = createTestEventResponse({
+        id: "google-row",
+        title: "Google original",
+        source: "GOOGLE",
+        syncedCalendarId: "calendar-1",
+      });
+      seedMockEvents([event]);
+      server.use(
+        http.get(`${API_BASE}/google/events/destinations`, () =>
+          HttpResponse.json({
+            data: {
+              destinations: [
+                {
+                  syncedCalendarId: "calendar-1",
+                  memberId: testMembers[0].id,
+                  memberName: "James",
+                  calendarName: "Personal",
+                  accessRole: "writer",
+                },
+              ],
+              reconnectMemberIds: [],
+              unavailableMemberIds: [],
+            },
+          }),
+        ),
+        http.put(`${API_BASE}/google/events/:id`, () => {
+          googlePuts++;
+          return HttpResponse.json(
+            {
+              message:
+                "This event changed in Google Calendar. It has been refreshed; review it before editing again.",
+            },
+            { status: 409 },
+          );
+        }),
+      );
+
+      const { user } = renderWithUser(<CalendarModule />);
+      await user.click(await screen.findByText("Google original"));
+      const edit = await screen.findByRole("button", { name: "Edit" });
+      await waitFor(() => expect(edit).toBeEnabled());
+      await user.click(edit);
+      await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+      await waitFor(() => expect(googlePuts).toBe(1));
+      expect(screen.getByRole("dialog")).toBeVisible();
+    });
+
     it("sends all fields including optional ones in PUT request", async () => {
       const event = createTestEventResponse({
         title: "Office Sync",
@@ -629,6 +867,113 @@ describe("CalendarModule", () => {
 
       // Event should still exist
       expect(getMockEvents()).toHaveLength(1);
+    });
+
+    it("deletes a writable non-recurring Google event through the Google endpoint", async () => {
+      const event = createTestEventResponse({
+        id: "google-event-row",
+        title: "Google event to delete",
+        source: "GOOGLE",
+        syncedCalendarId: "calendar-1",
+      });
+      seedMockEvents([event]);
+      let googleDeletes = 0;
+      let nativeDeletes = 0;
+      server.use(
+        http.get(`${API_BASE}/google/events/destinations`, () =>
+          HttpResponse.json({
+            data: {
+              destinations: [
+                {
+                  syncedCalendarId: "calendar-1",
+                  memberId: testMembers[0].id,
+                  memberName: "James",
+                  calendarName: "Personal",
+                  accessRole: "owner",
+                },
+              ],
+              reconnectMemberIds: [],
+              unavailableMemberIds: [],
+            },
+          }),
+        ),
+        http.delete(`${API_BASE}/google/events/:id`, () => {
+          googleDeletes++;
+          seedMockEvents([]);
+          return new HttpResponse(null, { status: 204 });
+        }),
+        http.delete(`${API_BASE}/calendar/events/:id`, () => {
+          nativeDeletes++;
+          return new HttpResponse(null, { status: 204 });
+        }),
+      );
+
+      const { user } = renderWithUser(<CalendarModule />);
+      await user.click(await screen.findByText("Google event to delete"));
+      const deleteButton = await screen.findByRole("button", {
+        name: /^delete$/i,
+      });
+      await waitFor(() => expect(deleteButton).toBeEnabled());
+      await user.click(deleteButton);
+      expect(
+        screen.getByText(/Google Calendar and FamilyHub/i),
+      ).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /delete event/i }));
+
+      await waitFor(() => expect(googleDeletes).toBe(1));
+      expect(nativeDeletes).toBe(0);
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      );
+    });
+
+    it("keeps a writable Google event open when Google deletion fails", async () => {
+      const event = createTestEventResponse({
+        id: "google-event-row",
+        title: "Google event kept",
+        source: "GOOGLE",
+        syncedCalendarId: "calendar-1",
+      });
+      seedMockEvents([event]);
+      server.use(
+        http.get(`${API_BASE}/google/events/destinations`, () =>
+          HttpResponse.json({
+            data: {
+              destinations: [
+                {
+                  syncedCalendarId: "calendar-1",
+                  memberId: testMembers[0].id,
+                  memberName: "James",
+                  calendarName: "Personal",
+                  accessRole: "writer",
+                },
+              ],
+              reconnectMemberIds: [],
+              unavailableMemberIds: [],
+            },
+          }),
+        ),
+        http.delete(`${API_BASE}/google/events/:id`, () =>
+          HttpResponse.json(
+            { message: "Google did not confirm event deletion" },
+            { status: 400 },
+          ),
+        ),
+      );
+
+      const { user } = renderWithUser(<CalendarModule />);
+      await user.click(await screen.findByText("Google event kept"));
+      const deleteButton = await screen.findByRole("button", {
+        name: /^delete$/i,
+      });
+      await waitFor(() => expect(deleteButton).toBeEnabled());
+      await user.click(deleteButton);
+      await user.click(screen.getByRole("button", { name: /delete event/i }));
+
+      expect(
+        await screen.findByText("Google did not confirm event deletion"),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
   });
 

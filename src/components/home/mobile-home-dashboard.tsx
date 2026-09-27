@@ -1,14 +1,19 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   useCreateEvent,
+  useCreateGoogleEvent,
   useDeleteEvent,
+  useDeleteGoogleEvent,
   useDeleteInstance,
   useFamilyMemberMap,
   useFamilyMembers,
   useFamilyName,
+  useGoogleWriteDestinations,
   useUpdateEvent,
+  useUpdateGoogleEvent,
   useUpdateInstance,
 } from "@/api";
+import type { ApiException } from "@/api/client";
 import {
   AddEventButton,
   type EditScope,
@@ -16,12 +21,14 @@ import {
   EventDetailModal,
   EventFormModal,
 } from "@/components/calendar";
+import { toast } from "@/components/ui/toaster";
 import { useIsMobile } from "@/hooks";
 import {
   resolveFeedSelection,
   selectOpenableEvents,
 } from "@/lib/home-activity/navigation";
 import type { FeedRow } from "@/lib/home-activity/types";
+import { isOfflineWriteError } from "@/lib/offline/read-only-guard";
 import { buildRRule } from "@/lib/recurrence-utils";
 import { format24hTo12h, formatLocalDate, getEventKey } from "@/lib/time-utils";
 import {
@@ -154,6 +161,19 @@ export function MobileHomeDashboard({
     openDetailModal,
     closeDetailModal,
   } = useEventDetailState();
+  const { data: googleWriteDestinations } = useGoogleWriteDestinations(
+    isDetailModalOpen && selectedEvent?.source === "GOOGLE",
+  );
+  const canDeleteSelectedGoogleEvent = Boolean(
+    selectedEvent?.source === "GOOGLE" &&
+      !selectedEvent.isRecurring &&
+      selectedEvent.syncedCalendarId &&
+      googleWriteDestinations?.data.destinations.some(
+        (destination) =>
+          destination.syncedCalendarId === selectedEvent.syncedCalendarId,
+      ),
+  );
+  const canEditSelectedGoogleEvent = canDeleteSelectedGoogleEvent;
   const { editingEvent, isEditModalOpen } = useEditModalState();
   const { today, comingUp, isLoading, isError, error } = useDashboardEvents({
     currentDate: now,
@@ -165,15 +185,57 @@ export function MobileHomeDashboard({
   );
   const heroEvent = "event" in heroState ? heroState.event : null;
   const heroEventKey = heroEvent ? getEventKey(heroEvent) : null;
+  const googleRequestId = useRef<string>(crypto.randomUUID());
   const createEvent = useCreateEvent({
     onSuccess: () => {
+      googleRequestId.current = crypto.randomUUID();
       closeAddEventModal();
+    },
+  });
+  const createGoogleEvent = useCreateGoogleEvent({
+    onSuccess: () => {
+      googleRequestId.current = crypto.randomUUID();
+      closeAddEventModal();
+    },
+    onError: (error: ApiException) => {
+      if (
+        isOfflineWriteError(error) ||
+        (typeof navigator !== "undefined" && navigator.onLine === false)
+      ) {
+        toast({
+          title: "You're offline",
+          description: "Changes can't be saved until you reconnect.",
+        });
+      }
+      toast({
+        title:
+          error.status === 503
+            ? "Check Google before retrying"
+            : "Could not create Google event",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
   const updateEvent = useUpdateEvent({
     onSuccess: () => {
       closeEditModal();
       setEditScope(null);
+    },
+  });
+  const updateGoogleEvent = useUpdateGoogleEvent({
+    onSuccess: () => closeEditModal(),
+    onError: (error) => {
+      toast({
+        title:
+          error.status === 409
+            ? "Event changed in Google"
+            : error.status === 503
+              ? "Check Google before retrying"
+              : "Could not update Google event",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
   const updateInstance = useUpdateInstance({
@@ -186,6 +248,11 @@ export function MobileHomeDashboard({
     onSuccess: () => {
       closeDetailModal();
       setScopeDialogOpen(false);
+    },
+  });
+  const deleteGoogleEvent = useDeleteGoogleEvent({
+    onSuccess: () => {
+      closeDetailModal();
     },
   });
   const deleteInstance = useDeleteInstance({
@@ -207,6 +274,7 @@ export function MobileHomeDashboard({
 
   const handleEventClick = (event: (typeof today)[number]) => {
     deleteEvent.reset();
+    deleteGoogleEvent.reset();
     deleteInstance.reset();
     openDetailModal(event);
   };
@@ -237,13 +305,27 @@ export function MobileHomeDashboard({
       recurrenceRule,
     };
 
-    createEvent.mutate(request);
+    if (formData.destination && formData.destination !== "native") {
+      const [sourceOwnerMemberId, syncedCalendarId] =
+        formData.destination.split(":");
+      if (!sourceOwnerMemberId || !syncedCalendarId) return;
+      createGoogleEvent.mutate({
+        sourceOwnerMemberId,
+        syncedCalendarId,
+        clientRequestId: googleRequestId.current,
+        event: request,
+      });
+    } else {
+      createEvent.mutate(request);
+    }
   };
 
   const handleDeleteEvent = () => {
     if (!selectedEvent) return;
 
     if (selectedEvent.source === "GOOGLE") {
+      if (selectedEvent.isRecurring || !selectedEvent.id) return;
+      deleteGoogleEvent.mutate(selectedEvent.id);
       return;
     }
 
@@ -259,7 +341,12 @@ export function MobileHomeDashboard({
   };
 
   const handleEditClick = () => {
-    if (!selectedEvent || selectedEvent.source === "GOOGLE") return;
+    if (!selectedEvent) return;
+    if (selectedEvent.source === "GOOGLE") {
+      if (!canEditSelectedGoogleEvent || selectedEvent.isRecurring) return;
+      openEditModal(selectedEvent);
+      return;
+    }
 
     if (selectedEvent.isRecurring) {
       setScopeAction("edit");
@@ -311,6 +398,12 @@ export function MobileHomeDashboard({
       location: formData.location,
       description: formData.description,
     };
+
+    if (currentEditingEvent.source === "GOOGLE") {
+      if (!currentEditingEvent.id || currentEditingEvent.isRecurring) return;
+      updateGoogleEvent.mutate({ id: currentEditingEvent.id, event: request });
+      return;
+    }
 
     if (currentEditingEvent.isRecurring && editScope === "this") {
       updateInstance.mutate({
@@ -397,9 +490,12 @@ export function MobileHomeDashboard({
       <EventFormModal
         mode="add"
         isOpen={isAddEventModalOpen}
-        onClose={closeAddEventModal}
+        onClose={() => {
+          googleRequestId.current = crypto.randomUUID();
+          closeAddEventModal();
+        }}
         onSubmit={handleAddEvent}
-        isPending={createEvent.isPending}
+        isPending={createEvent.isPending || createGoogleEvent.isPending}
         defaultValues={addEventDefaults ?? undefined}
       />
       <EventFormModal
@@ -410,7 +506,11 @@ export function MobileHomeDashboard({
           setEditScope(null);
         }}
         onSubmit={handleUpdateEvent}
-        isPending={updateEvent.isPending || updateInstance.isPending}
+        isPending={
+          updateEvent.isPending ||
+          updateGoogleEvent.isPending ||
+          updateInstance.isPending
+        }
         event={editingEvent ?? undefined}
         showRecurrencePicker={editScope !== "this"}
       />
@@ -420,10 +520,18 @@ export function MobileHomeDashboard({
         onClose={closeDetailModal}
         onEdit={handleEditClick}
         onDelete={handleDeleteEvent}
-        isDeleting={deleteEvent.isPending || deleteInstance.isPending}
-        deleteError={
-          deleteEvent.error?.message ?? deleteInstance.error?.message
+        isDeleting={
+          deleteEvent.isPending ||
+          deleteGoogleEvent.isPending ||
+          deleteInstance.isPending
         }
+        deleteError={
+          deleteEvent.error?.message ??
+          deleteGoogleEvent.error?.message ??
+          deleteInstance.error?.message
+        }
+        canDeleteGoogleEvent={canDeleteSelectedGoogleEvent}
+        canEditGoogleEvent={canEditSelectedGoogleEvent}
       />
       <EditScopeDialog
         isOpen={scopeDialogOpen}

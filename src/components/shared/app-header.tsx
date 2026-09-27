@@ -1,6 +1,7 @@
 import { Menu } from "lucide-react";
 import { useFamilyMembers, useFamilyName } from "@/api";
 import { getContextLabel } from "@/components/calendar/utils/context-label";
+import { useDashboardNow } from "@/components/home/hooks/use-hero-state";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks";
 import { colorMap } from "@/lib/types";
@@ -34,6 +35,7 @@ export function AppHeader() {
   // From app-store
   const openSidebar = useAppStore((state) => state.openSidebar);
   const activeModule = useAppStore((state) => state.activeModule);
+  const now = useDashboardNow();
 
   // Mobile detection
   const isMobile = useIsMobile();
@@ -130,9 +132,9 @@ export function AppHeader() {
           {familyName || "Family Hub"}
         </h1>
         <div className="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm text-muted-foreground">
-          <span>{formatDate(currentDate)}</span>
+          <span>{formatDate(activeModule === null ? now : currentDate)}</span>
           <span>•</span>
-          <span>{formatTime(new Date())}</span>
+          <span>{formatTime(now)}</span>
         </div>
       </div>
 

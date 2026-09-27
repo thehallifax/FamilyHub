@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore, useCalendarStore } from "@/stores";
 import {
   act,
@@ -115,10 +115,55 @@ describe("AppHeader (desktop)", () => {
     });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("renders the family name and member dots", () => {
     render(<AppHeader />);
     expect(screen.getByText("Test Family")).toBeInTheDocument();
     expect(screen.getByTitle("Alice")).toBeInTheDocument();
+  });
+
+  it("keeps the Home header clock current through minute and date rollover", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 27, 11, 10));
+    useAppStore.setState({ activeModule: null });
+    render(<AppHeader />);
+    expect(screen.getByText("September 27, 2026")).toBeInTheDocument();
+    expect(screen.getByText("11:10 AM")).toBeInTheDocument();
+
+    act(() => {
+      vi.setSystemTime(new Date(2026, 8, 27, 11, 11));
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(screen.getByText("11:11 AM")).toBeInTheDocument();
+
+    act(() => {
+      vi.setSystemTime(new Date(2026, 8, 28, 0, 0));
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(screen.getByText("September 28, 2026")).toBeInTheDocument();
+    expect(screen.getByText("12:00 AM")).toBeInTheDocument();
+  });
+
+  it("catches up immediately when the app becomes visible", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 27, 11, 10));
+    let visibilityState: DocumentVisibilityState = "hidden";
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      get: () => visibilityState,
+    });
+    render(<AppHeader />);
+
+    act(() => {
+      vi.setSystemTime(new Date(2026, 8, 27, 11, 32));
+      visibilityState = "visible";
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    expect(screen.getByText("11:32 AM")).toBeInTheDocument();
   });
 
   it("does not render the fake weather chip", () => {

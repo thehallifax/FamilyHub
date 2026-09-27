@@ -83,8 +83,7 @@ describe("EventDetailModal", () => {
     expect(link).toHaveAttribute("target", "_blank");
   });
 
-  it("shows toast when clicking Edit on a Google event", async () => {
-    const user = userEvent.setup();
+  it("keeps Google editing visibly unavailable", () => {
     render(
       <EventDetailModal
         {...defaultProps}
@@ -92,23 +91,69 @@ describe("EventDetailModal", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /edit/i }));
-    expect(mockToast).toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: "Edit unavailable" }),
+    ).toBeDisabled();
+    expect(mockToast).not.toHaveBeenCalled();
     expect(mockEdit).not.toHaveBeenCalled();
   });
 
-  it("shows toast when clicking Delete on a Google event", async () => {
+  it("enables ordinary writable Google editing", async () => {
     const user = userEvent.setup();
     render(
       <EventDetailModal
         {...defaultProps}
         event={{ ...baseEvent, source: "GOOGLE" }}
+        canEditGoogleEvent
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    expect(mockEdit).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps read-only Google events non-deletable", () => {
+    render(
+      <EventDetailModal
+        {...defaultProps}
+        event={{ ...baseEvent, source: "GOOGLE" }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /delete/i })).toBeDisabled();
+    expect(screen.getByText(/read-only in FamilyHub/i)).toBeInTheDocument();
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("confirms that a writable Google delete affects Google Calendar", async () => {
+    const user = userEvent.setup();
+    render(
+      <EventDetailModal
+        {...defaultProps}
+        event={{ ...baseEvent, source: "GOOGLE" }}
+        canDeleteGoogleEvent
       />,
     );
 
     await user.click(screen.getByRole("button", { name: /delete/i }));
-    expect(mockToast).toHaveBeenCalled();
-    expect(mockDelete).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/delete the event from Google Calendar and FamilyHub/i),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Delete Event" }));
+    expect(mockDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not enable recurring Google deletion", () => {
+    render(
+      <EventDetailModal
+        {...defaultProps}
+        event={{ ...baseEvent, source: "GOOGLE", isRecurring: true }}
+        canDeleteGoogleEvent
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /delete/i })).toBeDisabled();
+    expect(screen.getByText(/Recurring Google event changes/i)).toBeVisible();
   });
 
   it("calls onEdit normally for native events", async () => {
@@ -131,15 +176,11 @@ describe("EventDetailModal", () => {
 
   it("shows the delete error banner when deleteError is set", () => {
     render(<EventDetailModal {...defaultProps} deleteError="Delete failed" />);
-    expect(
-      screen.getByText("Failed to delete event. Please try again."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Delete failed")).toBeInTheDocument();
   });
 
   it("does not show the delete error banner when deleteError is undefined", () => {
     render(<EventDetailModal {...defaultProps} deleteError={undefined} />);
-    expect(
-      screen.queryByText("Failed to delete event. Please try again."),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Delete failed")).not.toBeInTheDocument();
   });
 });

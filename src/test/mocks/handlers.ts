@@ -2282,6 +2282,18 @@ export const handlers = [
   // Google Calendar API Handlers (default: disconnected state)
   // ============================================================================
 
+  // GET /google/events/destinations - no connected writable accounts by default
+  http.get(`${API_BASE}/google/events/destinations`, () =>
+    HttpResponse.json({
+      data: {
+        destinations: [],
+        reconnectMemberIds: [],
+        unavailableMemberIds: [],
+      },
+      message: null,
+    }),
+  ),
+
   // GET /google/status/:memberId - Connection status (default: disconnected)
   http.get(`${API_BASE}/google/status/:memberId`, () => {
     return HttpResponse.json(

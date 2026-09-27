@@ -18,6 +18,7 @@ import {
   renderWithUser,
   screen,
   seedFamilyStore,
+  typeAndWait,
   waitFor,
   waitForMemberSelected,
 } from "@/test/test-utils";
@@ -316,16 +317,12 @@ describe("HomeDashboard", () => {
     await user.click(screen.getByRole("button", { name: /^delete$/i }));
     await user.click(screen.getByRole("button", { name: /delete event/i }));
 
-    expect(
-      await screen.findByText("Failed to delete event. Please try again."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Delete failed")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /back/i }));
     await user.click(screen.getByRole("button", { name: /school pickup/i }));
 
-    expect(
-      screen.queryByText("Failed to delete event. Please try again."),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Delete failed")).not.toBeInTheDocument();
   });
 
   it("opens the reused add-event flow prefilled for the focused member and today", async () => {
@@ -345,6 +342,66 @@ describe("HomeDashboard", () => {
     expect(
       screen.getByRole("button", { name: /april 25th, 2026/i }),
     ).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Save to" })).toHaveValue(
+      "native",
+    );
+  });
+
+  it("creates a Google destination from the Home add-event flow without posting a native event", async () => {
+    seedMockEvents([]);
+    let googlePosts = 0;
+    let nativePosts = 0;
+    server.use(
+      http.get(`${API_BASE}/google/events/destinations`, () =>
+        HttpResponse.json({
+          data: {
+            destinations: [
+              {
+                syncedCalendarId: "calendar-1",
+                memberId: testMembers[0].id,
+                memberName: "John",
+                calendarName: "Personal",
+                accessRole: "owner",
+              },
+            ],
+            reconnectMemberIds: [],
+            unavailableMemberIds: [],
+          },
+        }),
+      ),
+      http.post(`${API_BASE}/calendar/events`, () => {
+        nativePosts++;
+        return HttpResponse.json({}, { status: 500 });
+      }),
+      http.post(`${API_BASE}/google/events`, () => {
+        googlePosts++;
+        return HttpResponse.json({
+          data: createTestEventResponse({
+            title: "Google Home Event",
+            source: "GOOGLE",
+          }),
+        });
+      }),
+    );
+
+    const { user } = renderWithUser(
+      <HomeDashboard nowOverride={currentDate} />,
+    );
+    await user.click(screen.getByRole("button", { name: /add event/i }));
+    await waitForMemberSelected("John");
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Save to" }),
+      `${testMembers[0].id}:calendar-1`,
+    );
+    await typeAndWait(
+      user,
+      screen.getByLabelText(/event name/i),
+      "Google Home Event",
+    );
+    await user.click(screen.getByRole("button", { name: /^add event$/i }));
+
+    await waitFor(() => expect(googlePosts).toBe(1));
+    expect(nativePosts).toBe(0);
   });
 
   it("renders the activity feed region on mobile", async () => {

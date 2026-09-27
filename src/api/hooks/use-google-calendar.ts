@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ApiException } from "@/api/client";
 import { googleCalendarService } from "@/api/services";
+import { assertOnlineForWrite } from "@/lib/offline/read-only-guard";
 import type { ApiResponse, GoogleCalendarInfo } from "@/lib/types";
 import { calendarKeys } from "./use-calendar";
 
@@ -10,7 +11,61 @@ export const googleCalendarKeys = {
     [...googleCalendarKeys.all, "status", memberId] as const,
   calendars: (memberId: string) =>
     [...googleCalendarKeys.all, "calendars", memberId] as const,
+  destinations: () => [...googleCalendarKeys.all, "destinations"] as const,
 };
+
+export function useGoogleWriteDestinations(enabled = true) {
+  return useQuery({
+    queryKey: googleCalendarKeys.destinations(),
+    queryFn: () => googleCalendarService.getWriteDestinations(),
+    enabled,
+    staleTime: 0,
+  });
+}
+
+export function useCreateGoogleEvent(callbacks?: GoogleMutationCallbacks) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: googleCalendarService.createEvent,
+    onMutate: () => assertOnlineForWrite(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: calendarKeys.events() });
+      callbacks?.onSuccess?.();
+    },
+    onError: (error: ApiException) => callbacks?.onError?.(error),
+  });
+}
+
+export function useDeleteGoogleEvent(callbacks?: GoogleMutationCallbacks) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: googleCalendarService.deleteEvent,
+    onMutate: () => assertOnlineForWrite(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: calendarKeys.events() });
+      callbacks?.onSuccess?.();
+    },
+    onError: (error: ApiException) => callbacks?.onError?.(error),
+  });
+}
+
+export function useUpdateGoogleEvent(callbacks?: GoogleMutationCallbacks) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      event,
+    }: {
+      id: string;
+      event: Parameters<typeof googleCalendarService.updateEvent>[1];
+    }) => googleCalendarService.updateEvent(id, event),
+    onMutate: () => assertOnlineForWrite(),
+    onSuccess: () => callbacks?.onSuccess?.(),
+    onError: (error: ApiException) => callbacks?.onError?.(error),
+    onSettled: () =>
+      queryClient.invalidateQueries({ queryKey: calendarKeys.events() }),
+  });
+}
 
 // Queries
 

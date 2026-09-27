@@ -146,6 +146,22 @@ export function GoogleCalendarSection({
         <div className="space-y-3">
           <p className="text-sm text-foreground">Connected</p>
           <p className="text-xs text-muted-foreground">{lastSyncedLabel}</p>
+          {status?.writeAuthorized === false && (
+            <div className="space-y-2 rounded-md border border-border p-3">
+              <p className="text-sm">
+                Reconnect to grant event write permission. This resets selected
+                calendars; choose them again after connecting.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleConnect}
+                disabled={!memberEmail}
+              >
+                Reconnect for write access
+              </Button>
+            </div>
+          )}
           {status?.syncIssue && (
             <p role="alert" className="text-xs text-destructive">
               {status.syncIssue}

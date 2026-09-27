@@ -16,6 +16,8 @@ export interface CalendarEvent {
   isRecurring?: boolean;
   // Google Calendar integration
   source?: "NATIVE" | "GOOGLE";
+  sourceOwnerMemberId?: string | null;
+  syncedCalendarId?: string | null;
   description?: string;
   htmlLink?: string;
 }

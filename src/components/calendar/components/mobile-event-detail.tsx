@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/toaster";
 import { formatRecurrenceLabel } from "@/lib/recurrence-utils";
 import type { CalendarEvent } from "@/lib/types";
 import { colorMap, type FamilyColor } from "@/lib/types";
@@ -30,6 +29,8 @@ interface MobileEventDetailProps {
   onDelete: () => void;
   isDeleting?: boolean;
   deleteError?: string | null;
+  canDeleteGoogleEvent?: boolean;
+  canEditGoogleEvent?: boolean;
 }
 
 function MobileEventDetail({
@@ -43,6 +44,8 @@ function MobileEventDetail({
   onDelete,
   isDeleting = false,
   deleteError,
+  canDeleteGoogleEvent = false,
+  canEditGoogleEvent = false,
 }: MobileEventDetailProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -59,23 +62,12 @@ function MobileEventDetail({
 
   const handleEditClick = () => {
     if (isGoogleEvent) {
-      toast({
-        title: "Synced from Google Calendar",
-        description: "Edit this event in Google Calendar.",
-      });
-      return;
+      if (!canEditGoogleEvent || event.isRecurring) return;
     }
     onEdit();
   };
 
   const handleDeleteAttempt = () => {
-    if (isGoogleEvent) {
-      toast({
-        title: "Synced from Google Calendar",
-        description: "Delete this event in Google Calendar.",
-      });
-      return;
-    }
     handleDeleteClick();
   };
 
@@ -133,17 +125,27 @@ function MobileEventDetail({
               variant="ghost"
               size="sm"
               onClick={handleEditClick}
-              disabled={isDeleting}
+              disabled={
+                isDeleting ||
+                (isGoogleEvent &&
+                  (!canEditGoogleEvent || Boolean(event.isRecurring)))
+              }
               className="px-3 text-white hover:bg-white/20 hover:text-white"
             >
               <Pencil className="mr-1.5 h-4 w-4" />
-              Edit
+              {isGoogleEvent && !canEditGoogleEvent
+                ? "Edit unavailable"
+                : "Edit"}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleDeleteAttempt}
-              disabled={isDeleting}
+              disabled={
+                isDeleting ||
+                (isGoogleEvent &&
+                  (!canDeleteGoogleEvent || Boolean(event.isRecurring)))
+              }
               className="px-3 text-white hover:bg-white/20 hover:text-white"
             >
               <Trash2 className="mr-1.5 h-4 w-4" />
@@ -238,12 +240,22 @@ function MobileEventDetail({
               </a>
             </div>
           )}
+          {isGoogleEvent && event.isRecurring && (
+            <p className="text-sm text-muted-foreground">
+              Recurring Google event changes are not supported yet.
+            </p>
+          )}
+          {isGoogleEvent && !event.isRecurring && !canDeleteGoogleEvent && (
+            <p className="text-sm text-muted-foreground">
+              This Google event is read-only in FamilyHub.
+            </p>
+          )}
         </div>
 
         {/* Error message */}
         {deleteError && (
           <div className="px-4 py-2 text-center text-sm text-destructive">
-            Failed to delete event. Please try again.
+            {deleteError}
           </div>
         )}
       </div>
@@ -252,7 +264,9 @@ function MobileEventDetail({
       {showDeleteConfirm && (
         <div className="space-y-3 border-t border-border bg-background px-4 pb-safe pt-4">
           <p className="text-center text-sm text-muted-foreground">
-            Are you sure you want to delete this event?
+            {isGoogleEvent
+              ? "This will delete the event from Google Calendar and FamilyHub."
+              : "Are you sure you want to delete this event?"}
           </p>
           <div className="flex gap-3">
             <Button

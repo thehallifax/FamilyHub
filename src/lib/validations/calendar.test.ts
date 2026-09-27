@@ -20,6 +20,25 @@ function createValidEventData(
 
 describe("calendar validations", () => {
   describe("eventFormSchema", () => {
+    it("allows an overnight timed Google event but keeps native end-date rules", () => {
+      const event = {
+        title: "Night shift",
+        date: "2025-12-23",
+        endDate: "2025-12-24",
+        startTime: "23:00",
+        endTime: "08:00",
+        audienceType: "FAMILY" as const,
+        memberIds: [],
+        isAllDay: false,
+      };
+      expect(
+        eventFormSchema.safeParse({ ...event, destination: "member:calendar" })
+          .success,
+      ).toBe(true);
+      expect(
+        eventFormSchema.safeParse({ ...event, destination: "native" }).success,
+      ).toBe(false);
+    });
     describe("title field", () => {
       it("accepts valid title", () => {
         const data = createValidEventData({ title: "Team Meeting" });

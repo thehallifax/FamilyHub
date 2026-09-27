@@ -1,6 +1,17 @@
 import { format } from "date-fns";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { HttpResponse, http } from "msw";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { testMembers } from "@/test/fixtures";
+import { API_BASE, server } from "@/test/mocks/server";
 import {
   render,
   renderWithUser,
@@ -33,8 +44,86 @@ function timeToMinutes(time: string) {
 }
 
 describe("EventForm", () => {
+  beforeAll(() => server.listen({ onUnhandledRequest: "warn" }));
+  afterEach(() => server.resetHandlers());
+  afterAll(() => server.close());
   const mockOnSubmit = vi.fn();
   const mockOnCancel = vi.fn();
+
+  it("defaults to FamilyHub and offers only distinctly labelled writable destinations", async () => {
+    server.use(
+      http.get(`${API_BASE}/google/events/destinations`, () =>
+        HttpResponse.json({
+          data: {
+            destinations: [
+              {
+                syncedCalendarId: "cal-j",
+                memberId: "member-j",
+                memberName: "James",
+                calendarName: "Personal",
+                accessRole: "writer",
+              },
+              {
+                syncedCalendarId: "cal-k",
+                memberId: "member-k",
+                memberName: "Kathryn",
+                calendarName: "Personal",
+                accessRole: "owner",
+              },
+            ],
+            reconnectMemberIds: [],
+            unavailableMemberIds: [],
+          },
+        }),
+      ),
+    );
+    const { user } = renderWithUser(
+      <EventForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />,
+    );
+    const destination = screen.getByRole("combobox", { name: "Save to" });
+    expect(destination).toHaveValue("native");
+    expect(
+      await screen.findByRole("option", { name: "James — Personal" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Kathryn — Personal" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { name: /Subscribed/ }),
+    ).not.toBeInTheDocument();
+    await user.selectOptions(destination, "member-j:cal-j");
+    expect(
+      screen.getByText(/no Google invitations are sent/i),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Who is this for?")).toBeInTheDocument();
+    expect(destination).toHaveClass("h-11");
+  });
+
+  it("explains reconnection when an account has no write scope", async () => {
+    server.use(
+      http.get(`${API_BASE}/google/events/destinations`, () =>
+        HttpResponse.json({
+          data: {
+            destinations: [],
+            reconnectMemberIds: [testMembers[0].id],
+            unavailableMemberIds: [],
+          },
+        }),
+      ),
+    );
+    render(
+      <EventForm mode="add" onSubmit={mockOnSubmit} onCancel={mockOnCancel} />,
+    );
+    expect(screen.getByRole("combobox", { name: "Save to" })).toHaveValue(
+      "native",
+    );
+    expect(
+      screen.getByRole("option", { name: "FamilyHub only" }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Reconnect the account in Settings/i),
+    ).toBeInTheDocument();
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();

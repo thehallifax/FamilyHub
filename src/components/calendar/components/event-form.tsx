@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { ChevronDown, Minus, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useFamilyMembers } from "@/api";
+import { useFamilyMembers, useGoogleWriteDestinations } from "@/api";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { FormError } from "@/components/ui/form-error";
@@ -25,6 +25,7 @@ interface EventFormProps {
   isPending?: boolean;
   showRecurrencePicker?: boolean;
   hideCancelButton?: boolean;
+  googleBacked?: boolean;
 }
 
 const DEFAULT_DURATION_MINUTES = 60;
@@ -72,8 +73,14 @@ function EventForm({
   isPending = false,
   showRecurrencePicker = true,
   hideCancelButton = false,
+  googleBacked = false,
 }: EventFormProps) {
   const familyMembers = useFamilyMembers();
+  const {
+    data: writeDestinations,
+    isError: destinationsError,
+    refetch: retryDestinations,
+  } = useGoogleWriteDestinations(mode === "add");
 
   /**
    * Get smart defaults for add mode
@@ -87,6 +94,7 @@ function EventForm({
 
     return {
       title: "",
+      destination: "native",
       date: format(new Date(), "yyyy-MM-dd"),
       startTime,
       endTime,
@@ -144,6 +152,8 @@ function EventForm({
   const recurrenceMonthDay = watch("recurrenceMonthDay");
   const recurrenceEndDate = watch("recurrenceEndDate");
   const descriptionValue = watch("description");
+  const destinationValue = watch("destination") ?? "native";
+  const googleDestination = mode === "add" && destinationValue !== "native";
 
   // Reset form when defaultValues change (e.g., switching between events in edit mode)
   useEffect(() => {
@@ -171,7 +181,11 @@ function EventForm({
       startMinutes + durationMinutes,
       LAST_MINUTE_OF_DAY,
     );
-    if (nextEndMinutes <= startMinutes) return;
+    if (
+      nextEndMinutes <= startMinutes &&
+      !(googleDestination && endDateValue && endDateValue > dateValue)
+    )
+      return;
 
     setValue("startTime", time);
     setValue("endTime", formatMinutesToTime(nextEndMinutes));
@@ -247,6 +261,69 @@ function EventForm({
         <FormError message={errors.title?.message} />
       </div>
 
+      {mode === "add" && (
+        <div className="space-y-2">
+          <Label htmlFor="event-destination">Save to</Label>
+          <select
+            id="event-destination"
+            value={destinationValue}
+            onChange={(event) =>
+              setValue("destination", event.target.value, {
+                shouldValidate: true,
+              })
+            }
+            className="h-11 w-full rounded-lg border border-input bg-input px-3 text-sm"
+          >
+            <option value="native">FamilyHub only</option>
+            {writeDestinations?.data.destinations.map((destination) => (
+              <option
+                key={destination.syncedCalendarId}
+                value={`${destination.memberId}:${destination.syncedCalendarId}`}
+              >
+                {destination.memberName} — {destination.calendarName}
+              </option>
+            ))}
+          </select>
+          <FormError message={errors.destination?.message} />
+          {writeDestinations?.data.reconnectMemberIds.length ? (
+            <p className="text-sm text-muted-foreground">
+              Google write permission is needed. Reconnect the account in
+              Settings → member profile.
+            </p>
+          ) : null}
+          {writeDestinations?.data.unavailableMemberIds.length ? (
+            <p className="text-sm text-muted-foreground">
+              Some Google calendars could not be checked. Retry later or check
+              the connection in Settings.
+            </p>
+          ) : null}
+          {destinationsError && (
+            <button
+              type="button"
+              className="min-h-11 text-sm text-destructive underline"
+              onClick={() => retryDestinations()}
+            >
+              Could not load Google destinations. Retry
+            </button>
+          )}
+          {googleDestination && (
+            <p className="text-xs text-muted-foreground">
+              FamilyHub audience controls who sees this here; no Google
+              invitations are sent.
+            </p>
+          )}
+        </div>
+      )}
+      {mode === "edit" && googleBacked && (
+        <div className="rounded-lg border border-border bg-muted/40 p-3">
+          <p className="text-sm font-medium">Save to: Google Calendar</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            The destination is fixed. Saving will update Google Calendar; the
+            FamilyHub audience remains local.
+          </p>
+        </div>
+      )}
+
       {/* Date */}
       <div className="space-y-2">
         <Label>Date</Label>
@@ -308,8 +385,8 @@ function EventForm({
         </Label>
       </div>
 
-      {/* End Date (multi-day all-day events) */}
-      {isAllDayValue && (
+      {/* Google timed events can also cross a date boundary. */}
+      {(isAllDayValue || googleDestination) && (
         <div className="space-y-2">
           <Label>End Date</Label>
           <DatePicker

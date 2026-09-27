@@ -42,6 +42,7 @@ function eventToFormData(event: CalendarEvent): Partial<EventFormData> {
     location: event.location ?? undefined,
     description: event.description ?? undefined,
     isAllDay: event.isAllDay,
+    destination: event.source === "GOOGLE" ? "google-existing" : "native",
   };
 
   if (event.recurrenceRule) {
@@ -83,6 +84,7 @@ function EventFormModal({
           isPending={isPending}
           showRecurrencePicker={showRecurrencePicker}
           hideCancelButton
+          googleBacked={event?.source === "GOOGLE"}
         />
       </MobileEventSheet>
     );
@@ -103,6 +105,7 @@ function EventFormModal({
           onCancel={onClose}
           isPending={isPending}
           showRecurrencePicker={showRecurrencePicker}
+          googleBacked={event?.source === "GOOGLE"}
         />
       </DialogContent>
     </Dialog>

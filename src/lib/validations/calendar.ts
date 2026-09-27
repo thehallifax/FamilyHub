@@ -45,6 +45,7 @@ export const eventFormSchema = z
       .min(1, "End time is required")
       .regex(TIME_24H_FORMAT_REGEX, "Invalid time format"),
     memberId: z.string().optional(), // legacy form defaults only
+    destination: z.string().optional(), // native or a selected Google calendar UUID
     audienceType: z.enum(["FAMILY", "MEMBERS"]).optional(),
     memberIds: z.array(z.string()).optional(),
     location: z
@@ -81,6 +82,10 @@ export const eventFormSchema = z
   .refine(
     (data) =>
       data.isAllDay ||
+      (!!data.endDate &&
+        data.endDate > data.date &&
+        !!data.destination &&
+        data.destination !== "native") ||
       getTimeInMinutes(data.endTime) > getTimeInMinutes(data.startTime),
     {
       message: "End time must be after start time",
@@ -91,10 +96,27 @@ export const eventFormSchema = z
     message: "End date must be on or after start date",
     path: ["endDate"],
   })
-  .refine((data) => !data.endDate || data.isAllDay, {
-    message: "End date is only valid for all-day events",
-    path: ["endDate"],
-  })
+  .refine(
+    (data) =>
+      !data.endDate ||
+      data.isAllDay ||
+      (!!data.destination && data.destination !== "native"),
+    {
+      message: "End date is only valid for all-day events",
+      path: ["endDate"],
+    },
+  )
+  .refine(
+    (data) =>
+      !data.destination ||
+      data.destination === "native" ||
+      !data.recurrenceFrequency ||
+      data.recurrenceFrequency === "none",
+    {
+      message: "Google recurring events are not supported yet",
+      path: ["destination"],
+    },
+  )
   .refine(
     (data) => {
       if (data.recurrenceFrequency !== "weekly") return true;

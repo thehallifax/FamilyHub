@@ -63,11 +63,15 @@ export {
 
 export {
   googleCalendarKeys,
+  useCreateGoogleEvent,
+  useDeleteGoogleEvent,
   useDisconnectGoogle,
   useGoogleCalendars,
   useGoogleConnectionStatus,
+  useGoogleWriteDestinations,
   useSyncGoogleCalendar,
   useUpdateGoogleCalendars,
+  useUpdateGoogleEvent,
 } from "./use-google-calendar";
 
 export {

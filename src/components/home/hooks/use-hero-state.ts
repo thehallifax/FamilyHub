@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import type { CalendarEvent } from "@/lib/types";
 import { deriveHeroState, type HeroState } from "../lib/hero-state";
 
-export function useDashboardNow(
-  nowProvider: () => Date = () => new Date(),
-): Date {
+const systemNow = () => new Date();
+
+export function useDashboardNow(nowProvider: () => Date = systemNow): Date {
   const [now, setNow] = useState(() => nowProvider());
 
   useEffect(() => {

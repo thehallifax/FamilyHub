@@ -4,9 +4,7 @@ import {
   CALENDAR_START_HOUR,
   compareEventsByTime,
   getEventKey,
-  getTimeInMinutes,
   isEventOnDate,
-  parseTime,
 } from "@/lib/time-utils";
 import type { CalendarEvent, FamilyMember } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -15,6 +13,8 @@ import {
   useAutoScrollToNow,
 } from "../../components/current-time-indicator";
 import { MOBILE_FAB_SCROLL_PADDING } from "../../components/floating-action-layout";
+import { getEventOffsetsForDay, pxFromOffsets } from "../../utils/hour-grid";
+import { calculateEventColumns } from "../day-lane-layout";
 import { SwipeContainer } from "./swipe-container";
 
 interface MobileDailyViewProps {
@@ -54,80 +54,6 @@ const EVEN_HOUR_LABEL: Record<number, string> = Object.fromEntries(
   EVEN_TIME_SLOTS.map((s) => [s.hour, s.label]),
 );
 
-function getEventGridPosition(startTime: string, endTime: string) {
-  const start = parseTime(startTime);
-  const end = parseTime(endTime);
-
-  const startRow = start.hours - START_HOUR;
-  const startMinuteOffset = start.minutes / 60;
-
-  const endRow = end.hours - START_HOUR;
-  const endMinuteOffset = end.minutes / 60;
-
-  const top = (startRow + startMinuteOffset) * ROW_HEIGHT;
-  const bottom = (endRow + endMinuteOffset) * ROW_HEIGHT;
-  const height = Math.max(bottom - top, 30);
-
-  return { top, height };
-}
-
-function eventsOverlap(a: CalendarEvent, b: CalendarEvent): boolean {
-  const aStart = getTimeInMinutes(a.startTime);
-  const aEnd = getTimeInMinutes(a.endTime);
-  const bStart = getTimeInMinutes(b.startTime);
-  const bEnd = getTimeInMinutes(b.endTime);
-  return aStart < bEnd && bStart < aEnd;
-}
-
-interface EventWithLayout extends CalendarEvent {
-  column: number;
-  totalColumns: number;
-}
-
-function calculateEventColumns(events: CalendarEvent[]): EventWithLayout[] {
-  if (events.length === 0) return [];
-
-  const sorted = [...events].sort((a, b) => {
-    const aStart = getTimeInMinutes(a.startTime);
-    const bStart = getTimeInMinutes(b.startTime);
-    if (aStart !== bStart) return aStart - bStart;
-
-    const aDuration = getTimeInMinutes(a.endTime) - aStart;
-    const bDuration = getTimeInMinutes(b.endTime) - bStart;
-    return bDuration - aDuration;
-  });
-
-  const result: EventWithLayout[] = [];
-  const columns: CalendarEvent[][] = [];
-
-  for (const event of sorted) {
-    let assignedColumn = -1;
-    for (let col = 0; col < columns.length; col++) {
-      const hasOverlap = columns[col].some((e) => eventsOverlap(e, event));
-      if (!hasOverlap) {
-        assignedColumn = col;
-        break;
-      }
-    }
-
-    if (assignedColumn === -1) {
-      assignedColumn = columns.length;
-      columns.push([]);
-    }
-
-    columns[assignedColumn].push(event);
-    result.push({ ...event, column: assignedColumn, totalColumns: 0 });
-  }
-
-  for (const eventWithLayout of result) {
-    const overlapping = result.filter((e) => eventsOverlap(e, eventWithLayout));
-    const maxColumn = Math.max(...overlapping.map((e) => e.column));
-    eventWithLayout.totalColumns = maxColumn + 1;
-  }
-
-  return result;
-}
-
 export function MobileDailyView({
   events,
   currentDate,
@@ -153,8 +79,8 @@ export function MobileDailyView({
   }, [events, currentDate]);
 
   const eventsWithLayout = useMemo(
-    () => calculateEventColumns(timedEvents),
-    [timedEvents],
+    () => calculateEventColumns(timedEvents, currentDate, END_HOUR),
+    [timedEvents, currentDate],
   );
 
   return (
@@ -215,9 +141,16 @@ export function MobileDailyView({
 
             {/* Events */}
             {eventsWithLayout.map((event) => {
-              const { top, height } = getEventGridPosition(
-                event.startTime,
-                event.endTime,
+              const offsets = getEventOffsetsForDay(
+                event,
+                currentDate,
+                END_HOUR,
+              );
+              if (!offsets) return null;
+              const { top, height } = pxFromOffsets(
+                offsets,
+                ROW_HEIGHT,
+                END_HOUR - START_HOUR,
               );
               const { column, totalColumns } = event;
 

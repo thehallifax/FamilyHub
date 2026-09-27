@@ -5,6 +5,7 @@ import {
   DENSE_HOUR_ROW_HEIGHT,
   earliestEventStartMinutes,
   getEventOffsets,
+  getEventOffsetsForDay,
   hourRowHeightFor,
   minutesFromStartHour,
   pxFromOffsets,
@@ -30,6 +31,62 @@ describe("hour-grid geometry", () => {
       startOffsetHours: 3,
       spanHours: 1.5,
     });
+  });
+
+  it("keeps ordinary same-day timed geometry unchanged", () => {
+    const day = new Date(2025, 5, 15);
+    expect(
+      getEventOffsetsForDay(
+        { date: day, startTime: "9:00 AM", endTime: "10:30 AM" },
+        day,
+      ),
+    ).toEqual(getEventOffsets("9:00 AM", "10:30 AM"));
+  });
+
+  it("clips an overnight event to each visible day boundary", () => {
+    const event = {
+      date: new Date(2025, 5, 15),
+      endDate: new Date(2025, 5, 16),
+      startTime: "11:00 PM",
+      endTime: "8:00 AM",
+    };
+    expect(getEventOffsetsForDay(event, new Date(2025, 5, 15))).toEqual({
+      startOffsetHours: 17,
+      spanHours: 1,
+    });
+    expect(getEventOffsetsForDay(event, new Date(2025, 5, 16))).toEqual({
+      startOffsetHours: 0,
+      spanHours: 2,
+    });
+    expect(getEventOffsetsForDay(event, new Date(2025, 5, 16), 23)).toEqual({
+      startOffsetHours: 0,
+      spanHours: 2,
+    });
+  });
+
+  it("omits segments entirely outside the visible hours or date span", () => {
+    const event = {
+      date: new Date(2025, 5, 15),
+      endDate: new Date(2025, 5, 16),
+      startTime: "11:00 PM",
+      endTime: "1:00 AM",
+    };
+    expect(getEventOffsetsForDay(event, new Date(2025, 5, 16))).toBeNull();
+    expect(getEventOffsetsForDay(event, new Date(2025, 5, 17))).toBeNull();
+    expect(getEventOffsetsForDay(event, new Date(2025, 5, 15), 23)).toBeNull();
+  });
+
+  it("keeps the minimum tap height inside the end-of-day grid boundary", () => {
+    const event = {
+      date: new Date(2025, 5, 15),
+      endDate: new Date(2025, 5, 16),
+      startTime: "11:50 PM",
+      endTime: "1:00 AM",
+    };
+    const offsets = getEventOffsetsForDay(event, event.date);
+    expect(offsets).not.toBeNull();
+    const geometry = pxFromOffsets(offsets!, 60);
+    expect(geometry.top + geometry.height).toBeCloseTo(18 * 60);
   });
 
   it("converts offsets to pixels with a per-row height and a minimum", () => {

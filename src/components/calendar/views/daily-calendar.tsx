@@ -18,7 +18,11 @@ import {
   CurrentTimeIndicator,
   useAutoScrollToNow,
 } from "../components/current-time-indicator";
-import { getEventOffsets, pxFromOffsets, TIME_SLOTS } from "../utils/hour-grid";
+import {
+  getEventOffsetsForDay,
+  pxFromOffsets,
+  TIME_SLOTS,
+} from "../utils/hour-grid";
 import { calculateEventColumns } from "./day-lane-layout";
 
 interface DailyCalendarProps {
@@ -74,8 +78,8 @@ export function DailyCalendar({
 
   // Memoize the O(n²) column layout calculation
   const eventsWithLayout = useMemo(
-    () => calculateEventColumns(timedEvents),
-    [timedEvents],
+    () => calculateEventColumns(timedEvents, currentDate),
+    [timedEvents, currentDate],
   );
 
   return (
@@ -184,10 +188,9 @@ export function DailyCalendar({
           )}
 
           {eventsWithLayout.map((event) => {
-            const { top, height } = pxFromOffsets(
-              getEventOffsets(event.startTime, event.endTime),
-              ROW_HEIGHT,
-            );
+            const offsets = getEventOffsetsForDay(event, currentDate);
+            if (!offsets) return null;
+            const { top, height } = pxFromOffsets(offsets, ROW_HEIGHT);
             const { column, totalColumns } = event;
 
             // Calculate horizontal position (max 3 columns)

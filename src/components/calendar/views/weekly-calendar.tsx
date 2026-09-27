@@ -22,7 +22,7 @@ import {
 } from "../components/current-time-indicator";
 import {
   earliestEventStartMinutes,
-  getEventOffsets,
+  getEventOffsetsForDay,
   hourRowHeightFor,
   pxFromOffsets,
   TIME_SLOTS,
@@ -83,7 +83,7 @@ export function WeeklyCalendar({
       for (const day of weekDays) {
         if (!isEventOnDate(event, day)) continue;
         const dateKey = day.toDateString();
-        // Multi-day events are always all-day, so route to allDay map
+        // All-day spans use the band; overnight timed spans stay in the hour grid.
         if (event.isAllDay) {
           allDay.get(dateKey)?.push(event);
         } else {
@@ -357,10 +357,9 @@ export function WeeklyCalendar({
 
                   <div className="absolute inset-0 px-0.5">
                     {dayEvents.map((event) => {
-                      const { top, height } = pxFromOffsets(
-                        getEventOffsets(event.startTime, event.endTime),
-                        rowHeight,
-                      );
+                      const offsets = getEventOffsetsForDay(event, date);
+                      if (!offsets) return null;
+                      const { top, height } = pxFromOffsets(offsets, rowHeight);
                       return (
                         <div
                           key={getEventKey(event)}

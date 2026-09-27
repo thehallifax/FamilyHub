@@ -174,6 +174,42 @@ describe("DayLanesCalendar", () => {
     );
   });
 
+  it("clips an overnight event at midnight and resumes it in the next day's hour grid", () => {
+    const overnight: CalendarEvent = {
+      ...base,
+      id: "overnight",
+      title: "Night shift",
+      date: new Date(2026, 6, 6),
+      endDate: new Date(2026, 6, 7),
+      startTime: "11:00 PM",
+      endTime: "8:00 AM",
+      memberId: "m1",
+    };
+    const props = {
+      events: [overnight],
+      members,
+      filter: noopFilter,
+      showRail: false,
+      onEventClick: vi.fn(),
+      onSelectDate: vi.fn(),
+    };
+    const { rerender } = render(
+      <DayLanesCalendar {...props} currentDate={new Date(2026, 6, 6)} />,
+    );
+    expect(screen.getByTestId("day-lane-event")).toHaveStyle({
+      top: "884px",
+      height: "52px",
+    });
+
+    rerender(
+      <DayLanesCalendar {...props} currentDate={new Date(2026, 6, 7)} />,
+    );
+    expect(screen.getByTestId("day-lane-event")).toHaveStyle({
+      top: "0px",
+      height: "104px",
+    });
+  });
+
   it("renders all-day chips in the band aligned under the owning member", () => {
     render(
       <DayLanesCalendar

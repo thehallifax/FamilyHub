@@ -1,4 +1,8 @@
-import { CALENDAR_START_HOUR, parseTime } from "@/lib/time-utils";
+import {
+  CALENDAR_START_HOUR,
+  formatLocalDate,
+  parseTime,
+} from "@/lib/time-utils";
 import type { CalendarEvent } from "@/lib/types";
 
 /** Desktop hour-row height at tablet widths (768-1023px), matching today's grid. */
@@ -57,14 +61,42 @@ export function getEventOffsets(
   return { startOffsetHours, spanHours: endOffsetHours - startOffsetHours };
 }
 
+/** Visible portion of a timed event on one day of a 6 AM–midnight grid. */
+export function getEventOffsetsForDay(
+  event: Pick<CalendarEvent, "date" | "endDate" | "startTime" | "endTime">,
+  day: Date,
+  gridEndHour = 24,
+): EventOffsets | null {
+  const dayKey = formatLocalDate(day);
+  const startKey = formatLocalDate(event.date);
+  const endKey = formatLocalDate(event.endDate ?? event.date);
+  if (dayKey < startKey || dayKey > endKey) return null;
+
+  const start = parseTime(event.startTime);
+  const end = parseTime(event.endTime);
+  const startHour = dayKey === startKey ? start.hours + start.minutes / 60 : 0;
+  const endHour = dayKey === endKey ? end.hours + end.minutes / 60 : 24;
+  const visibleStart = Math.max(startHour, CALENDAR_START_HOUR);
+  const visibleEnd = Math.min(endHour, gridEndHour);
+  if (visibleEnd <= visibleStart) return null;
+  return {
+    startOffsetHours: visibleStart - CALENDAR_START_HOUR,
+    spanHours: visibleEnd - visibleStart,
+  };
+}
+
 /** Absolute top/height in px for the given offsets at a row height. */
 export function pxFromOffsets(
   { startOffsetHours, spanHours }: EventOffsets,
   rowHeight: number,
+  gridDurationHours: number = TIME_SLOTS.length,
 ): { top: number; height: number } {
   return {
     top: startOffsetHours * rowHeight,
-    height: Math.max(spanHours * rowHeight, MIN_EVENT_PX),
+    height: Math.min(
+      Math.max(spanHours * rowHeight, MIN_EVENT_PX),
+      Math.max(0, gridDurationHours - startOffsetHours) * rowHeight,
+    ),
   };
 }
 

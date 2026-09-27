@@ -21,7 +21,7 @@ import { DayMiniMonthRail } from "../components/day-mini-month-rail";
 import { MemberAvatar } from "../components/member-avatar";
 import {
   DENSE_HOUR_ROW_HEIGHT,
-  getEventOffsets,
+  getEventOffsetsForDay,
   pxFromOffsets,
   TIME_SLOTS,
 } from "../utils/hour-grid";
@@ -264,7 +264,10 @@ export function DayLanesCalendar({
           >
             {members.map((member) => {
               const memberEvents = timedEventsByMember.get(member.id) ?? [];
-              const eventsWithLayout = calculateEventColumns(memberEvents);
+              const eventsWithLayout = calculateEventColumns(
+                memberEvents,
+                currentDate,
+              );
 
               return (
                 <fieldset
@@ -284,10 +287,9 @@ export function DayLanesCalendar({
                   ))}
 
                   {eventsWithLayout.map((event) => {
-                    const { top, height } = pxFromOffsets(
-                      getEventOffsets(event.startTime, event.endTime),
-                      ROW_HEIGHT,
-                    );
+                    const offsets = getEventOffsetsForDay(event, currentDate);
+                    if (!offsets) return null;
+                    const { top, height } = pxFromOffsets(offsets, ROW_HEIGHT);
                     const effectiveColumns = Math.min(event.totalColumns, 3);
                     const columnWidth = 100 / effectiveColumns;
                     const visibleColumn = Math.min(event.column, 2);

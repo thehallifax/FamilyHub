@@ -45,4 +45,29 @@ describe("day-lane-layout", () => {
   it("returns an empty array for no events", () => {
     expect(calculateEventColumns([])).toEqual([]);
   });
+
+  it("places an overnight continuation beside an overlapping morning event", () => {
+    const day = new Date(2025, 5, 16);
+    const result = calculateEventColumns(
+      [
+        ev({
+          id: "overnight",
+          date: new Date(2025, 5, 15),
+          endDate: day,
+          startTime: "11:00 PM",
+          endTime: "8:00 AM",
+        }),
+        ev({
+          id: "morning",
+          date: day,
+          startTime: "7:00 AM",
+          endTime: "9:00 AM",
+        }),
+      ],
+      day,
+    );
+    expect(result).toHaveLength(2);
+    expect(result.map((event) => event.column)).toEqual([0, 1]);
+    expect(result.every((event) => event.totalColumns === 2)).toBe(true);
+  });
 });

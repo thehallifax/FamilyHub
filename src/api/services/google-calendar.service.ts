@@ -35,11 +35,15 @@ export const googleCalendarService = {
 
   async updateEvent(
     eventId: string,
-    event: CreateEventRequest,
+    request: {
+      event: CreateEventRequest;
+      scope?: "THIS_EVENT" | "ENTIRE_SERIES";
+      occurrenceDate?: string;
+    },
   ): Promise<ApiResponse<CalendarEventResponse>> {
     return httpClient.put<ApiResponse<CalendarEventResponse>>(
       `/google/events/${eventId}`,
-      { event },
+      request,
     );
   },
   async getAuthUrl(memberId: string): Promise<ApiResponse<GoogleAuthUrl>> {

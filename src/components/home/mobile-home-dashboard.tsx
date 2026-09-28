@@ -173,7 +173,14 @@ export function MobileHomeDashboard({
           destination.syncedCalendarId === selectedEvent.syncedCalendarId,
       ),
   );
-  const canEditSelectedGoogleEvent = canDeleteSelectedGoogleEvent;
+  const canEditSelectedGoogleEvent = Boolean(
+    selectedEvent?.source === "GOOGLE" &&
+      selectedEvent.syncedCalendarId &&
+      googleWriteDestinations?.data.destinations.some(
+        (destination) =>
+          destination.syncedCalendarId === selectedEvent.syncedCalendarId,
+      ),
+  );
   const { editingEvent, isEditModalOpen } = useEditModalState();
   const { today, comingUp, isLoading, isError, error } = useDashboardEvents({
     currentDate: now,
@@ -224,7 +231,10 @@ export function MobileHomeDashboard({
     },
   });
   const updateGoogleEvent = useUpdateGoogleEvent({
-    onSuccess: () => closeEditModal(),
+    onSuccess: () => {
+      closeEditModal();
+      setEditScope(null);
+    },
     onError: (error) => {
       toast({
         title:
@@ -343,7 +353,12 @@ export function MobileHomeDashboard({
   const handleEditClick = () => {
     if (!selectedEvent) return;
     if (selectedEvent.source === "GOOGLE") {
-      if (!canEditSelectedGoogleEvent || selectedEvent.isRecurring) return;
+      if (!canEditSelectedGoogleEvent) return;
+      if (selectedEvent.isRecurring) {
+        setScopeAction("edit");
+        setScopeDialogOpen(true);
+        return;
+      }
       openEditModal(selectedEvent);
       return;
     }
@@ -400,7 +415,23 @@ export function MobileHomeDashboard({
     };
 
     if (currentEditingEvent.source === "GOOGLE") {
-      if (!currentEditingEvent.id || currentEditingEvent.isRecurring) return;
+      if (currentEditingEvent.isRecurring) {
+        if (!editScope) return;
+        const id =
+          editScope === "all"
+            ? getParentId(currentEditingEvent)
+            : (currentEditingEvent.id ?? getParentId(currentEditingEvent));
+        updateGoogleEvent.mutate({
+          id,
+          event: request,
+          scope: editScope === "this" ? "THIS_EVENT" : "ENTIRE_SERIES",
+          ...(editScope === "this" && {
+            occurrenceDate: formatLocalDate(currentEditingEvent.date),
+          }),
+        });
+        return;
+      }
+      if (!currentEditingEvent.id) return;
       updateGoogleEvent.mutate({ id: currentEditingEvent.id, event: request });
       return;
     }
@@ -512,7 +543,10 @@ export function MobileHomeDashboard({
           updateInstance.isPending
         }
         event={editingEvent ?? undefined}
-        showRecurrencePicker={editScope !== "this"}
+        showRecurrencePicker={
+          editingEvent?.source !== "GOOGLE" && editScope !== "this"
+        }
+        googleEditScope={editingEvent?.source === "GOOGLE" ? editScope : null}
       />
       <EventDetailModal
         event={selectedEvent}

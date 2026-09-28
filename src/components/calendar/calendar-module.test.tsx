@@ -696,6 +696,138 @@ describe("CalendarModule", () => {
       );
     });
 
+    it("edits one virtual Google occurrence through the authoritative recurring scope", async () => {
+      const event = createTestEventResponse({
+        id: null,
+        recurringEventId: "parent-row",
+        isRecurring: true,
+        recurrenceRule: "FREQ=WEEKLY;BYDAY=SU",
+        title: "Weekly Google event",
+        source: "GOOGLE",
+        syncedCalendarId: "calendar-1",
+        audienceType: "MEMBERS",
+        memberIds: [testMembers[0].id],
+      });
+      seedMockEvents([event]);
+      let capturedId = "";
+      let capturedBody: Record<string, unknown> = {};
+      server.use(
+        http.get(`${API_BASE}/google/events/destinations`, () =>
+          HttpResponse.json({
+            data: {
+              destinations: [
+                {
+                  syncedCalendarId: "calendar-1",
+                  memberId: testMembers[0].id,
+                  memberName: "James",
+                  calendarName: "Personal",
+                  accessRole: "owner",
+                },
+              ],
+              reconnectMemberIds: [],
+              unavailableMemberIds: [],
+            },
+          }),
+        ),
+        http.put(
+          `${API_BASE}/google/events/:id`,
+          async ({ request, params }) => {
+            capturedId = String(params.id);
+            capturedBody = (await request.json()) as Record<string, unknown>;
+            return HttpResponse.json({ data: event });
+          },
+        ),
+      );
+
+      const { user } = renderWithUser(<CalendarModule />);
+      await user.click(await screen.findByText("Weekly Google event"));
+      const edit = await screen.findByRole("button", { name: "Edit" });
+      await waitFor(() => expect(edit).toBeEnabled());
+      await user.click(edit);
+      expect(
+        screen.getByRole("dialog", { name: "Edit recurring event" }),
+      ).toBeVisible();
+      await user.click(screen.getByRole("button", { name: "OK" }));
+      expect(screen.getByText("Editing: This event")).toBeVisible();
+      await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+      await waitFor(() => expect(capturedId).toBe("parent-row"));
+      expect(capturedBody).toMatchObject({
+        scope: "THIS_EVENT",
+        occurrenceDate: event.date,
+      });
+    });
+
+    it("edits an entire Google series with timing controls locked", async () => {
+      const event = createTestEventResponse({
+        id: "exception-row",
+        recurringEventId: "parent-row",
+        isRecurring: true,
+        title: "Modified occurrence",
+        source: "GOOGLE",
+        syncedCalendarId: "calendar-1",
+        audienceType: "MEMBERS",
+        memberIds: [testMembers[0].id],
+      });
+      seedMockEvents([event]);
+      let capturedId = "";
+      let capturedBody: Record<string, unknown> = {};
+      server.use(
+        http.get(`${API_BASE}/google/events/destinations`, () =>
+          HttpResponse.json({
+            data: {
+              destinations: [
+                {
+                  syncedCalendarId: "calendar-1",
+                  memberId: testMembers[0].id,
+                  memberName: "James",
+                  calendarName: "Personal",
+                  accessRole: "writer",
+                },
+              ],
+              reconnectMemberIds: [],
+              unavailableMemberIds: [],
+            },
+          }),
+        ),
+        http.put(
+          `${API_BASE}/google/events/:id`,
+          async ({ request, params }) => {
+            capturedId = String(params.id);
+            capturedBody = (await request.json()) as Record<string, unknown>;
+            return HttpResponse.json({ data: event });
+          },
+        ),
+      );
+
+      const { user } = renderWithUser(<CalendarModule />);
+      await user.click(await screen.findByText("Modified occurrence"));
+      const edit = await screen.findByRole("button", { name: "Edit" });
+      await waitFor(() => expect(edit).toBeEnabled());
+      await user.click(edit);
+      await user.click(screen.getByLabelText("Entire series"));
+      await user.click(screen.getByRole("button", { name: "OK" }));
+
+      expect(screen.getByText("Editing: Entire series")).toBeVisible();
+      const dateField = screen.getByText("Date").parentElement;
+      expect(dateField).not.toBeNull();
+      expect(
+        within(dateField as HTMLElement).getByRole("button"),
+      ).toBeDisabled();
+      expect(screen.getByRole("switch")).toBeDisabled();
+      const startTimeField = screen.getByText("Start Time").parentElement;
+      expect(startTimeField).not.toBeNull();
+      expect(
+        within(startTimeField as HTMLElement).getAllByRole("button")[0],
+      ).toBeDisabled();
+      expect(screen.queryByText("Repeat")).not.toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+      await waitFor(() => expect(capturedId).toBe("parent-row"));
+      expect(capturedBody).toMatchObject({ scope: "ENTIRE_SERIES" });
+      expect(capturedBody).not.toHaveProperty("occurrenceDate");
+    });
+
     it("keeps the Google edit form open when an external-change conflict occurs", async () => {
       let googlePuts = 0;
       const event = createTestEventResponse({

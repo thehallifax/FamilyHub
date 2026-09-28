@@ -417,6 +417,71 @@ describe("HomeDashboard", () => {
     expect(nativePosts).toBe(0);
   });
 
+  it("edits a recurring Google occurrence from Home with an explicit scope", async () => {
+    const event = createTestEventResponse({
+      id: null,
+      recurringEventId: "google-parent-row",
+      isRecurring: true,
+      recurrenceRule: "RRULE:FREQ=WEEKLY;BYDAY=SA",
+      title: "Weekly Google breakfast",
+      date: "2026-04-25",
+      startTime: "9:45 AM",
+      endTime: "10:15 AM",
+      memberId: testMembers[0].id,
+      source: "GOOGLE",
+      syncedCalendarId: "calendar-1",
+    });
+    seedMockEvents([event]);
+    let capturedId = "";
+    let capturedBody: Record<string, unknown> = {};
+    server.use(
+      http.get(`${API_BASE}/google/events/destinations`, () =>
+        HttpResponse.json({
+          data: {
+            destinations: [
+              {
+                syncedCalendarId: "calendar-1",
+                memberId: testMembers[0].id,
+                memberName: "John",
+                calendarName: "Personal",
+                accessRole: "owner",
+              },
+            ],
+            reconnectMemberIds: [],
+            unavailableMemberIds: [],
+          },
+        }),
+      ),
+      http.put(`${API_BASE}/google/events/:id`, async ({ request, params }) => {
+        capturedId = String(params.id);
+        capturedBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ data: event });
+      }),
+    );
+
+    const { user } = renderWithUser(
+      <HomeDashboard nowOverride={currentDate} />,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /weekly google breakfast/i }),
+    );
+    const edit = await screen.findByRole("button", { name: "Edit" });
+    await waitFor(() => expect(edit).toBeEnabled());
+    await user.click(edit);
+    expect(
+      screen.getByRole("dialog", { name: "Edit recurring event" }),
+    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "OK" }));
+    expect(screen.getByText("Editing: This event")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+
+    await waitFor(() => expect(capturedId).toBe("google-parent-row"));
+    expect(capturedBody).toMatchObject({
+      scope: "THIS_EVENT",
+      occurrenceDate: "2026-04-25",
+    });
+  });
+
   it("renders the activity feed region on mobile", async () => {
     setViewportWidth(768);
     render(<HomeDashboard nowOverride={new Date(2026, 5, 21, 12)} />);

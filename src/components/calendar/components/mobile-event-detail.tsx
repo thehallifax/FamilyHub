@@ -62,7 +62,7 @@ function MobileEventDetail({
 
   const handleEditClick = () => {
     if (isGoogleEvent) {
-      if (!canEditGoogleEvent || event.isRecurring) return;
+      if (!canEditGoogleEvent) return;
     }
     onEdit();
   };
@@ -125,11 +125,7 @@ function MobileEventDetail({
               variant="ghost"
               size="sm"
               onClick={handleEditClick}
-              disabled={
-                isDeleting ||
-                (isGoogleEvent &&
-                  (!canEditGoogleEvent || Boolean(event.isRecurring)))
-              }
+              disabled={isDeleting || (isGoogleEvent && !canEditGoogleEvent)}
               className="px-3 text-white hover:bg-white/20 hover:text-white"
             >
               <Pencil className="mr-1.5 h-4 w-4" />
@@ -240,12 +236,12 @@ function MobileEventDetail({
               </a>
             </div>
           )}
-          {isGoogleEvent && event.isRecurring && (
+          {isGoogleEvent && event.isRecurring && canEditGoogleEvent && (
             <p className="text-sm text-muted-foreground">
-              Recurring Google event changes are not supported yet.
+              Editing lets you choose this event or the entire series.
             </p>
           )}
-          {isGoogleEvent && !event.isRecurring && !canDeleteGoogleEvent && (
+          {isGoogleEvent && !canEditGoogleEvent && (
             <p className="text-sm text-muted-foreground">
               This Google event is read-only in FamilyHub.
             </p>

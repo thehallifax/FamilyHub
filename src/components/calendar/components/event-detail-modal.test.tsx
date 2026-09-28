@@ -149,11 +149,15 @@ describe("EventDetailModal", () => {
         {...defaultProps}
         event={{ ...baseEvent, source: "GOOGLE", isRecurring: true }}
         canDeleteGoogleEvent
+        canEditGoogleEvent
       />,
     );
 
     expect(screen.getByRole("button", { name: /delete/i })).toBeDisabled();
-    expect(screen.getByText(/Recurring Google event changes/i)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Edit" })).toBeEnabled();
+    expect(
+      screen.getByText(/choose this event or the entire series/i),
+    ).toBeVisible();
   });
 
   it("calls onEdit normally for native events", async () => {

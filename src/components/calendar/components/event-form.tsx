@@ -26,6 +26,7 @@ interface EventFormProps {
   showRecurrencePicker?: boolean;
   hideCancelButton?: boolean;
   googleBacked?: boolean;
+  googleEditScope?: "this" | "all" | null;
 }
 
 const DEFAULT_DURATION_MINUTES = 60;
@@ -74,6 +75,7 @@ function EventForm({
   showRecurrencePicker = true,
   hideCancelButton = false,
   googleBacked = false,
+  googleEditScope = null,
 }: EventFormProps) {
   const familyMembers = useFamilyMembers();
   const {
@@ -154,6 +156,7 @@ function EventForm({
   const descriptionValue = watch("description");
   const destinationValue = watch("destination") ?? "native";
   const googleDestination = mode === "add" && destinationValue !== "native";
+  const seriesTimingReadOnly = googleBacked && googleEditScope === "all";
 
   // Reset form when defaultValues change (e.g., switching between events in edit mode)
   useEffect(() => {
@@ -316,10 +319,17 @@ function EventForm({
       )}
       {mode === "edit" && googleBacked && (
         <div className="rounded-lg border border-border bg-muted/40 p-3">
-          <p className="text-sm font-medium">Save to: Google Calendar</p>
+          <p className="text-sm font-medium">
+            {googleEditScope === "this"
+              ? "Editing: This event"
+              : googleEditScope === "all"
+                ? "Editing: Entire series"
+                : "Save to: Google Calendar"}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            The destination is fixed. Saving will update Google Calendar; the
-            FamilyHub audience remains local.
+            {seriesTimingReadOnly
+              ? "The series date, time, and repeat pattern stay unchanged. Title, details, and FamilyHub audience apply to the series."
+              : "The destination is fixed. Saving will update Google Calendar; the FamilyHub audience remains local."}
           </p>
         </div>
       )}
@@ -338,6 +348,7 @@ function EventForm({
           }}
           placeholder="Pick a date"
           error={!!errors.date}
+          disabled={seriesTimingReadOnly}
         />
         <FormError message={errors.date?.message} />
       </div>
@@ -367,6 +378,7 @@ function EventForm({
           type="button"
           role="switch"
           aria-checked={!!isAllDayValue}
+          disabled={seriesTimingReadOnly}
           onClick={toggleAllDay}
           className={cn(
             "relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors",
@@ -380,7 +392,13 @@ function EventForm({
             )}
           />
         </button>
-        <Label className="cursor-pointer" onClick={toggleAllDay}>
+        <Label
+          className={cn(
+            "cursor-pointer",
+            seriesTimingReadOnly && "cursor-default opacity-50",
+          )}
+          onClick={seriesTimingReadOnly ? undefined : toggleAllDay}
+        >
           All day
         </Label>
       </div>
@@ -400,6 +418,7 @@ function EventForm({
             placeholder="Same day (optional)"
             error={!!errors.endDate}
             fromDate={dateAsDate}
+            disabled={seriesTimingReadOnly}
           />
           <FormError message={errors.endDate?.message} />
         </div>
@@ -425,6 +444,7 @@ function EventForm({
                 size="icon-lg"
                 className="h-11 w-11 shrink-0 bg-input"
                 aria-label="Start time earlier by 15 minutes"
+                disabled={seriesTimingReadOnly}
                 onClick={() => handleStartTimeNudge(-NUDGE_MINUTES)}
               >
                 <Minus className="h-4 w-4" aria-hidden="true" />
@@ -435,6 +455,7 @@ function EventForm({
                 placeholder="Start time"
                 error={!!errors.startTime}
                 className="h-11 min-w-0 flex-1"
+                disabled={seriesTimingReadOnly}
               />
               <Button
                 type="button"
@@ -442,6 +463,7 @@ function EventForm({
                 size="icon-lg"
                 className="h-11 w-11 shrink-0 bg-input"
                 aria-label="Start time later by 15 minutes"
+                disabled={seriesTimingReadOnly}
                 onClick={() => handleStartTimeNudge(NUDGE_MINUTES)}
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
@@ -458,6 +480,7 @@ function EventForm({
                 size="icon-lg"
                 className="h-11 w-11 shrink-0 bg-input"
                 aria-label="End time earlier by 15 minutes"
+                disabled={seriesTimingReadOnly}
                 onClick={() => handleEndTimeNudge(-NUDGE_MINUTES)}
               >
                 <Minus className="h-4 w-4" aria-hidden="true" />
@@ -468,6 +491,7 @@ function EventForm({
                 placeholder="End time"
                 error={!!errors.endTime}
                 className="h-11 min-w-0 flex-1"
+                disabled={seriesTimingReadOnly}
               />
               <Button
                 type="button"
@@ -475,6 +499,7 @@ function EventForm({
                 size="icon-lg"
                 className="h-11 w-11 shrink-0 bg-input"
                 aria-label="End time later by 15 minutes"
+                disabled={seriesTimingReadOnly}
                 onClick={() => handleEndTimeNudge(NUDGE_MINUTES)}
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />

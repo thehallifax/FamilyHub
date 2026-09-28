@@ -66,7 +66,7 @@ function EditScopeDialog({
               onChange={() => setScope("all")}
               className="accent-primary"
             />
-            <span className="text-sm">All events</span>
+            <span className="text-sm">Entire series</span>
           </label>
         </div>
 

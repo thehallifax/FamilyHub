@@ -69,7 +69,7 @@ function EventDetailModal({
 
   const handleEditClick = () => {
     if (isGoogleEvent) {
-      if (!canEditGoogleEvent || event.isRecurring) return;
+      if (!canEditGoogleEvent) return;
     }
     onEdit();
   };
@@ -209,12 +209,12 @@ function EventDetailModal({
                 </a>
               </div>
             )}
-            {isGoogleEvent && event.isRecurring && (
+            {isGoogleEvent && event.isRecurring && canEditGoogleEvent && (
               <p className="text-sm text-muted-foreground">
-                Recurring Google event changes are not supported yet.
+                Editing lets you choose this event or the entire series.
               </p>
             )}
-            {isGoogleEvent && !event.isRecurring && !canDeleteGoogleEvent && (
+            {isGoogleEvent && !canEditGoogleEvent && (
               <p className="text-sm text-muted-foreground">
                 This Google event is read-only in FamilyHub.
               </p>
@@ -268,11 +268,7 @@ function EventDetailModal({
               <Button
                 variant="outline"
                 onClick={handleEditClick}
-                disabled={
-                  isDeleting ||
-                  (isGoogleEvent &&
-                    (!canEditGoogleEvent || Boolean(event.isRecurring)))
-                }
+                disabled={isDeleting || (isGoogleEvent && !canEditGoogleEvent)}
                 className="flex-1 min-h-[48px]"
               >
                 <Pencil className="w-4 h-4 mr-2" />

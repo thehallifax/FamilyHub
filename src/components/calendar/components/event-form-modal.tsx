@@ -23,6 +23,7 @@ interface EventFormModalProps {
   /** For edit mode: the event to pre-populate the form with */
   event?: CalendarEvent;
   showRecurrencePicker?: boolean;
+  googleEditScope?: "this" | "all" | null;
 }
 
 /**
@@ -45,7 +46,10 @@ function eventToFormData(event: CalendarEvent): Partial<EventFormData> {
     destination: event.source === "GOOGLE" ? "google-existing" : "native",
   };
 
-  if (event.recurrenceRule) {
+  // Google recurrence is edited server-side by scope. Keeping its RRULE out of
+  // the form avoids treating an existing Google series as a newly-created
+  // recurring destination while preserving the rule unchanged in Google.
+  if (event.recurrenceRule && event.source !== "GOOGLE") {
     const recurrence = parseRRule(event.recurrenceRule);
     base.recurrenceFrequency = recurrence.frequency;
     base.recurrenceInterval = recurrence.interval;
@@ -66,6 +70,7 @@ function EventFormModal({
   defaultValues,
   event,
   showRecurrencePicker,
+  googleEditScope,
 }: EventFormModalProps) {
   const isMobile = useIsMobile();
   const title = mode === "add" ? "Add Event" : "Edit Event";
@@ -85,6 +90,7 @@ function EventFormModal({
           showRecurrencePicker={showRecurrencePicker}
           hideCancelButton
           googleBacked={event?.source === "GOOGLE"}
+          googleEditScope={googleEditScope}
         />
       </MobileEventSheet>
     );
@@ -106,6 +112,7 @@ function EventFormModal({
           isPending={isPending}
           showRecurrencePicker={showRecurrencePicker}
           googleBacked={event?.source === "GOOGLE"}
+          googleEditScope={googleEditScope}
         />
       </DialogContent>
     </Dialog>

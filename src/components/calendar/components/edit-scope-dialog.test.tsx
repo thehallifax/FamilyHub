@@ -15,7 +15,7 @@ describe("EditScopeDialog", () => {
 
     expect(screen.getByText("Edit recurring event")).toBeInTheDocument();
     expect(screen.getByLabelText("This event")).toBeInTheDocument();
-    expect(screen.getByLabelText("All events")).toBeInTheDocument();
+    expect(screen.getByLabelText("Entire series")).toBeInTheDocument();
   });
 
   it("renders delete title when action is delete", () => {
@@ -37,7 +37,7 @@ describe("EditScopeDialog", () => {
       <EditScopeDialog {...defaultProps} onSelect={onSelect} />,
     );
 
-    await user.click(screen.getByLabelText("All events"));
+    await user.click(screen.getByLabelText("Entire series"));
     await user.click(screen.getByRole("button", { name: "OK" }));
 
     expect(onSelect).toHaveBeenCalledWith("all");

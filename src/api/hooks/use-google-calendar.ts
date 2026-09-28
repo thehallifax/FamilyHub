@@ -55,10 +55,19 @@ export function useUpdateGoogleEvent(callbacks?: GoogleMutationCallbacks) {
     mutationFn: ({
       id,
       event,
+      scope,
+      occurrenceDate,
     }: {
       id: string;
-      event: Parameters<typeof googleCalendarService.updateEvent>[1];
-    }) => googleCalendarService.updateEvent(id, event),
+      event: Parameters<typeof googleCalendarService.updateEvent>[1]["event"];
+      scope?: "THIS_EVENT" | "ENTIRE_SERIES";
+      occurrenceDate?: string;
+    }) =>
+      googleCalendarService.updateEvent(id, {
+        event,
+        scope,
+        occurrenceDate,
+      }),
     onMutate: () => assertOnlineForWrite(),
     onSuccess: () => callbacks?.onSuccess?.(),
     onError: (error: ApiException) => callbacks?.onError?.(error),

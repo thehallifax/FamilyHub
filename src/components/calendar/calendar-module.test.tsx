@@ -1,4 +1,9 @@
-import { waitFor, within } from "@testing-library/react";
+import {
+  createEvent,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import {
   afterAll,
@@ -119,6 +124,27 @@ describe("CalendarModule", () => {
       await waitFor(() => {
         expect(screen.getByText("Team Meeting")).toBeInTheDocument();
       });
+    });
+
+    it("renders on insecure LAN origins without crypto.randomUUID", async () => {
+      seedMockEvents([]);
+      vi.stubGlobal("crypto", {
+        getRandomValues(array: Uint8Array) {
+          array.fill(42);
+          return array;
+        },
+      });
+
+      try {
+        render(<CalendarModule />);
+
+        expect(
+          await screen.findByRole("button", { name: "Add event" }),
+        ).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Day" })).toBeInTheDocument();
+      } finally {
+        vi.unstubAllGlobals();
+      }
     });
   });
 
@@ -984,6 +1010,202 @@ describe("CalendarModule", () => {
         month: "short",
         day: "numeric",
       });
+
+    async function pointerGesture(
+      targetTestId: string,
+      start: { x: number; y: number },
+      end: { x: number; y: number },
+    ) {
+      await waitFor(() => {
+        expect(screen.queryByText("Loading events...")).not.toBeInTheDocument();
+      });
+      const surface = await screen.findByTestId(targetTestId);
+      const pointerDown = createEvent.pointerDown(surface, {
+        pointerId: 7,
+        clientX: start.x,
+        clientY: start.y,
+      });
+      Object.defineProperties(pointerDown, {
+        pointerId: { value: 7 },
+        pointerType: { value: "touch" },
+        isPrimary: { value: true },
+        clientX: { value: start.x },
+        clientY: { value: start.y },
+      });
+      fireEvent(surface, pointerDown);
+      const pointerUp = createEvent.pointerUp(surface, {
+        pointerId: 7,
+        clientX: end.x,
+        clientY: end.y,
+      });
+      Object.defineProperties(pointerUp, {
+        pointerId: { value: 7 },
+        pointerType: { value: "touch" },
+        isPrimary: { value: true },
+        clientX: { value: end.x },
+        clientY: { value: end.y },
+      });
+      fireEvent(surface, pointerUp);
+    }
+
+    async function swipeCalendar(
+      direction: "left" | "right",
+      targetTestId: string,
+    ) {
+      const startX = direction === "left" ? 300 : 120;
+      const endX = direction === "left" ? 180 : 240;
+      await pointerGesture(
+        targetTestId,
+        { x: startX, y: 200 },
+        { x: endX, y: 204 },
+      );
+    }
+
+    it.each([
+      {
+        name: "Day swipe left advances across a year boundary",
+        view: "daily" as const,
+        direction: "left" as const,
+        targetTestId: "day-time-grid",
+        initial: new Date(2026, 11, 31),
+        expected: new Date(2027, 0, 1),
+      },
+      {
+        name: "Day swipe right returns to the previous day",
+        view: "daily" as const,
+        direction: "right" as const,
+        targetTestId: "day-time-grid",
+        initial: new Date(2027, 0, 1),
+        expected: new Date(2026, 11, 31),
+      },
+      {
+        name: "Week swipe left advances one week",
+        view: "weekly" as const,
+        direction: "left" as const,
+        targetTestId: "week-time-grid",
+        initial: new Date(2026, 11, 27),
+        expected: new Date(2027, 0, 3),
+      },
+      {
+        name: "Week swipe right returns one week",
+        view: "weekly" as const,
+        direction: "right" as const,
+        targetTestId: "week-time-grid",
+        initial: new Date(2027, 0, 3),
+        expected: new Date(2026, 11, 27),
+      },
+      {
+        name: "Month swipe left advances across a year boundary",
+        view: "monthly" as const,
+        direction: "left" as const,
+        targetTestId: "month-grid",
+        initial: new Date(2026, 11, 15),
+        expected: new Date(2027, 0, 15),
+      },
+      {
+        name: "Month swipe right returns to the previous month",
+        view: "monthly" as const,
+        direction: "right" as const,
+        targetTestId: "month-grid",
+        initial: new Date(2027, 0, 15),
+        expected: new Date(2026, 11, 15),
+      },
+    ])("$name through the shared navigation state", async (testCase) => {
+      seedMockEvents([]);
+      seedCalendarStore({
+        calendarView: testCase.view,
+        currentDate: testCase.initial,
+      });
+
+      render(<CalendarModule />);
+      await swipeCalendar(testCase.direction, testCase.targetTestId);
+
+      await waitFor(() =>
+        expect(useCalendarStore.getState().currentDate).toEqual(
+          testCase.expected,
+        ),
+      );
+      if (testCase.view === "daily") {
+        expect(
+          screen.getByText(expectedDailyLabel(testCase.expected)),
+        ).toBeInTheDocument();
+      }
+    });
+
+    it("does not navigate from an interactive event in the calendar body", async () => {
+      const currentDate = new Date();
+      seedCalendarStore({ calendarView: "daily", currentDate });
+      seedMockEvents([
+        createTestEventResponse({
+          title: "Interactive body event",
+        }),
+      ]);
+
+      render(<CalendarModule />);
+      const eventTitle = await screen.findByText("Interactive body event");
+      const eventButton = eventTitle.closest("button");
+      expect(eventButton).not.toBeNull();
+
+      const pointerDown = createEvent.pointerDown(eventButton as Element, {
+        pointerId: 8,
+        clientX: 300,
+        clientY: 300,
+      });
+      Object.defineProperties(pointerDown, {
+        pointerId: { value: 8 },
+        pointerType: { value: "touch" },
+        isPrimary: { value: true },
+        clientX: { value: 300 },
+        clientY: { value: 300 },
+      });
+      fireEvent(eventButton as Element, pointerDown);
+      const pointerUp = createEvent.pointerUp(eventButton as Element, {
+        pointerId: 8,
+        clientX: 180,
+        clientY: 304,
+      });
+      Object.defineProperties(pointerUp, {
+        pointerId: { value: 8 },
+        pointerType: { value: "touch" },
+        isPrimary: { value: true },
+        clientX: { value: 180 },
+        clientY: { value: 304 },
+      });
+      fireEvent(eventButton as Element, pointerUp);
+
+      expect(useCalendarStore.getState().currentDate).toEqual(currentDate);
+    });
+
+    it("does not navigate for a predominantly vertical body gesture", async () => {
+      const currentDate = new Date(2026, 5, 1);
+      seedMockEvents([]);
+      seedCalendarStore({ calendarView: "weekly", currentDate });
+
+      render(<CalendarModule />);
+      await pointerGesture(
+        "week-time-grid",
+        { x: 300, y: 180 },
+        { x: 230, y: 300 },
+      );
+
+      expect(useCalendarStore.getState().currentDate).toEqual(currentDate);
+    });
+
+    it("leaves Schedule scrolling free of period-changing swipes", async () => {
+      seedMockEvents([]);
+      const currentDate = new Date(2026, 5, 1);
+      seedCalendarStore({ calendarView: "schedule", currentDate });
+
+      render(<CalendarModule />);
+
+      await waitFor(() => {
+        expect(screen.queryByText("Loading events...")).not.toBeInTheDocument();
+      });
+      expect(
+        screen.queryByTestId("calendar-swipe-surface"),
+      ).not.toBeInTheDocument();
+      expect(useCalendarStore.getState().currentDate).toEqual(currentDate);
+    });
 
     it("navigates to previous day when Previous button clicked", async () => {
       seedMockEvents([]);

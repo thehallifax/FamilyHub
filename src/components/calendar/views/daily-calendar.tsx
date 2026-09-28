@@ -148,7 +148,12 @@ export function DailyCalendar({
       )}
 
       {/* Calendar grid */}
-      <div className="flex-1 flex overflow-y-auto" ref={scrollContainerRef}>
+      <div
+        data-testid="day-time-grid"
+        data-calendar-swipe-canvas="true"
+        className="flex-1 flex touch-pan-y overflow-y-auto"
+        ref={scrollContainerRef}
+      >
         {/* Time column */}
         <div className="w-12 sm:w-16 shrink-0 bg-card border-r border-border">
           {TIME_SLOTS.map((time, index) => (

@@ -237,7 +237,9 @@ export function DayLanesCalendar({
         )}
 
         <div
-          className="flex min-h-0 flex-1 overflow-y-auto"
+          data-testid="day-time-grid"
+          data-calendar-swipe-canvas="true"
+          className="flex min-h-0 flex-1 touch-pan-y overflow-y-auto"
           ref={scrollContainerRef}
         >
           <div className="w-14 shrink-0 border-r border-border bg-card">

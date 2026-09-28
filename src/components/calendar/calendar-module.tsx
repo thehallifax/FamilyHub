@@ -42,6 +42,7 @@ import {
   MobileWeeklyView,
   MonthlyCalendar,
   ScheduleCalendar,
+  useSwipeNavigation,
   WeeklyCalendar,
 } from "@/components/calendar";
 import { railThresholdPx } from "@/components/calendar/utils/day-rail";
@@ -102,6 +103,34 @@ function notifyOfflineWrite(error: ApiException): void {
       description: "Changes can't be saved until you reconnect.",
     });
   }
+}
+
+/**
+ * Build the UUID-shaped idempotency key used for Google event creation.
+ * `crypto.randomUUID()` is secure-context-only, while MacBook staging is
+ * intentionally served to iOS devices over plain LAN HTTP.
+ */
+function createGoogleRequestId(): string {
+  const webCrypto = globalThis.crypto;
+  if (typeof webCrypto?.randomUUID === "function") {
+    return webCrypto.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+  if (typeof webCrypto?.getRandomValues === "function") {
+    webCrypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+  }
+
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0"));
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex
+    .slice(6, 8)
+    .join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10).join("")}`;
 }
 
 export function CalendarModule() {
@@ -250,17 +279,17 @@ export function CalendarModule() {
   const rawEvents = useMemo(() => eventsResponse?.data ?? [], [eventsResponse]);
 
   // Mutations
-  const googleRequestId = useRef<string>(crypto.randomUUID());
+  const googleRequestId = useRef<string>(createGoogleRequestId());
   const createEvent = useCreateEvent({
     onSuccess: () => {
-      googleRequestId.current = crypto.randomUUID();
+      googleRequestId.current = createGoogleRequestId();
       closeAddEventModal();
     },
     onError: notifyOfflineWrite,
   });
   const createGoogleEvent = useCreateGoogleEvent({
     onSuccess: () => {
-      googleRequestId.current = crypto.randomUUID();
+      googleRequestId.current = createGoogleRequestId();
       closeAddEventModal();
     },
     onError: (error) => {
@@ -677,8 +706,14 @@ export function CalendarModule() {
     }
   };
 
+  const swipeNavigation = useSwipeNavigation({
+    onSwipeLeft: goToNext,
+    onSwipeRight: goToPrevious,
+    enabled: !isMobile && calendarView !== "schedule",
+  });
+
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div {...swipeNavigation} className="flex-1 flex flex-col overflow-hidden">
       {/* Toolbar */}
       {isMobile ? (
         <MobileToolbar members={members} />
@@ -710,7 +745,7 @@ export function CalendarModule() {
         mode="add"
         isOpen={isAddEventModalOpen}
         onClose={() => {
-          googleRequestId.current = crypto.randomUUID();
+          googleRequestId.current = createGoogleRequestId();
           closeAddEventModal();
         }}
         onSubmit={handleAddEvent}

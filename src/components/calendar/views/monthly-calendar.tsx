@@ -206,7 +206,11 @@ function MonthlyCalendarCompact({
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-background p-4 overflow-auto">
+    <div
+      data-testid="month-grid"
+      data-calendar-swipe-canvas="true"
+      className="flex-1 flex flex-col min-h-0 touch-pan-y bg-background p-4 overflow-auto"
+    >
       {/* Weekday headers */}
       <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-2 shrink-0">
         {weekDays.map((day) => (
@@ -544,9 +548,11 @@ function MonthlyCalendarLarge({
   return (
     // biome-ignore lint/a11y/useSemanticElements: CSS grid layout, not table data
     <div
+      data-testid="month-grid"
+      data-calendar-swipe-canvas="true"
       role="grid"
       aria-label={format(currentDate, "MMMM yyyy")}
-      className="flex min-h-0 flex-1 flex-col overflow-x-clip overflow-y-auto p-4"
+      className="flex min-h-0 flex-1 touch-pan-y flex-col overflow-x-clip overflow-y-auto p-4"
     >
       {/* biome-ignore lint/a11y/useSemanticElements: CSS grid layout, not table data */}
       {/* biome-ignore lint/a11y/useFocusableInteractive: roving tabindex lives on the gridcells; rows are never tab stops */}

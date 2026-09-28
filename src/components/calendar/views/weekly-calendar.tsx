@@ -308,7 +308,12 @@ export function WeeklyCalendar({
       )}
 
       {/* Calendar grid with events */}
-      <div className="flex-1 overflow-auto" ref={scrollContainerRef}>
+      <div
+        data-testid="week-time-grid"
+        data-calendar-swipe-canvas="true"
+        className="flex-1 touch-pan-y overflow-auto"
+        ref={scrollContainerRef}
+      >
         {/* Min-width wrapper enables horizontal scroll on narrow screens */}
         <div className="min-w-[640px]">
           <div className="grid min-h-full" style={{ gridTemplateColumns }}>

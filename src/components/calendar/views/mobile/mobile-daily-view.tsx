@@ -91,7 +91,8 @@ export function MobileDailyView({
     >
       {/* Scrollable grid */}
       <div
-        className="flex-1 overflow-y-auto"
+        data-calendar-swipe-canvas="true"
+        className="flex-1 touch-pan-y overflow-y-auto"
         ref={scrollContainerRef}
         style={{ paddingBottom: MOBILE_FAB_SCROLL_PADDING }}
       >

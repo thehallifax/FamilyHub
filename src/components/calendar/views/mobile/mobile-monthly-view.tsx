@@ -126,6 +126,7 @@ export function MobileMonthlyView({
                 key={day.toISOString()}
                 type="button"
                 role="gridcell"
+                data-calendar-swipe-canvas="true"
                 onClick={() => handleDayClick(day)}
                 aria-label={ariaLabel}
                 aria-selected={isSelected}
@@ -169,7 +170,8 @@ export function MobileMonthlyView({
 
       {/* Selected Day Event List */}
       <div
-        className="flex-1 overflow-y-auto"
+        data-calendar-swipe-canvas="true"
+        className="flex-1 touch-pan-y overflow-y-auto"
         style={{ paddingBottom: MOBILE_FAB_SCROLL_PADDING }}
       >
         {/* Selected day header */}

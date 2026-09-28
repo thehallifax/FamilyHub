@@ -73,7 +73,10 @@ export function LargeNowHero({
   const event = isEventState(state) ? state.event : null;
   const colors = event ? eventColors(event, member ? [member] : []) : null;
   const content = (
-    <div className="relative min-h-[22rem] overflow-hidden rounded-lg border border-border/70 bg-card px-8 py-8 shadow-sm lg:min-h-[28rem] lg:px-10 lg:py-10 2xl:min-h-[34rem] 2xl:px-14 2xl:py-14">
+    <div
+      data-testid="large-home-hero-panel"
+      className="relative min-h-[17rem] overflow-hidden rounded-lg border border-border/70 bg-card px-7 py-6 shadow-sm lg:min-h-[28rem] lg:px-10 lg:py-10 2xl:min-h-[34rem] 2xl:px-14 2xl:py-14"
+    >
       {event && colors && (
         <span
           data-testid="large-hero-accent"
@@ -81,19 +84,19 @@ export function LargeNowHero({
           style={{ backgroundColor: colors.hex }}
         />
       )}
-      <div className="flex h-full flex-col justify-between gap-8 pl-2">
-        <div className="space-y-5">
+      <div className="flex h-full flex-col justify-between gap-5 pl-2 lg:gap-8">
+        <div className="space-y-3 lg:space-y-5">
           <p className="text-lg font-semibold text-foreground/65 lg:text-xl">
             {metaFor(state, now)}
           </p>
           {/* line-clamp keeps extreme titles from burying the state strip
               below the fold on tablet heights (spec allows intentional
               truncation; the full title lives in the aria-label). */}
-          <h2 className="line-clamp-4 max-w-[12ch] text-6xl font-semibold leading-[1.03] text-foreground lg:text-7xl 2xl:text-8xl">
+          <h2 className="line-clamp-4 max-w-[18ch] text-5xl font-semibold leading-[1.03] text-foreground [overflow-wrap:anywhere] lg:max-w-[12ch] lg:text-7xl 2xl:text-8xl">
             {titleFor(state)}
           </h2>
           {event?.location && (
-            <p className="max-w-xl text-2xl leading-8 text-foreground/65">
+            <p className="max-w-xl text-xl leading-7 text-foreground/65 lg:text-2xl lg:leading-8">
               {event.location}
             </p>
           )}

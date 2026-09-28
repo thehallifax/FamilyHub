@@ -145,6 +145,46 @@ describe("large Home agenda", () => {
     expect(useAppStore.getState().activeModule).toBe("chores");
   });
 
+  it("keeps the lg landscape grid while providing an intentional portrait stack", async () => {
+    seedBoard();
+    seedMockEvents([]);
+
+    renderWithUser(<LargeHomeDashboard nowOverride={now} />);
+
+    const grid = await screen.findByTestId("large-home-grid");
+    expect(grid).toHaveClass("grid-cols-1");
+    expect(grid.className).toContain(
+      "lg:grid-cols-[minmax(0,1.42fr)_minmax(22rem,0.88fr)]",
+    );
+
+    const hero = await screen.findByTestId("large-home-hero-panel");
+    expect(hero).toHaveClass("min-h-[17rem]", "lg:min-h-[28rem]");
+    expect(screen.getByRole("region", { name: "Home status" })).toBeVisible();
+
+    const summaries = screen.getByTestId("home-summary-grid");
+    expect(summaries).toHaveClass("grid-cols-2", "lg:grid-cols-3");
+    expect(
+      screen.getByRole("button", { name: /open chores/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /open meals/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /open lists/i }),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("button", { name: /today sun, jul 5/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Chores" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Tomorrow" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "View calendar" }),
+    ).toBeInTheDocument();
+  });
+
   it("blocks a second completion while the first request is pending", async () => {
     seedBoard();
     let releaseRequest: (() => void) | undefined;

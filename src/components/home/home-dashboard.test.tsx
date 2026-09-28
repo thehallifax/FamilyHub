@@ -187,6 +187,19 @@ describe("HomeDashboard", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("uses the large responsive Home composition in the narrow-tablet band", async () => {
+    setViewportWidth(820);
+    seedMockEvents([]);
+
+    render(<HomeDashboard nowOverride={currentDate} />);
+
+    expect(await screen.findByTestId("large-home-dashboard")).toBeVisible();
+    expect(screen.getByTestId("large-home-grid")).toHaveClass("grid-cols-1");
+    expect(
+      screen.queryByText("Good morning, Test Family"),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders the calm empty state without any Google connect CTA", async () => {
     seedMockEvents([]);
 

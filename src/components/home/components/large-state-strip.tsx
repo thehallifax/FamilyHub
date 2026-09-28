@@ -24,7 +24,11 @@ export function LargeStateStrip({
   onSelect: (target: HomeSummaryTarget) => void;
 }) {
   return (
-    <section aria-label="Household status" className="grid grid-cols-3 gap-3">
+    <section
+      aria-label="Household status"
+      data-testid="home-summary-grid"
+      className="grid grid-cols-2 gap-3 lg:grid-cols-3"
+    >
       {summaries.map((summary) => {
         const Icon = iconByModule[summary.module];
         const moduleLabel = labelByModule[summary.module];
@@ -34,7 +38,7 @@ export function LargeStateStrip({
             type="button"
             onClick={() => onSelect(summary.target)}
             aria-label={`Open ${moduleLabel}. ${summary.label}`}
-            className="min-h-24 rounded-lg border border-border/70 bg-card px-4 py-4 text-left shadow-sm transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="min-h-24 rounded-lg border border-border/70 bg-card px-4 py-4 text-left shadow-sm transition-colors last:col-span-2 hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:last:col-span-1"
           >
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
               <Icon className="h-4 w-4" />

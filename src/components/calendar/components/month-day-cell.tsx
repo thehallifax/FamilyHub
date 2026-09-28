@@ -95,6 +95,7 @@ export function MonthDayCell({
       aria-label={`${format(date, "MMMM d, yyyy")}, ${countLabel}${outsideLabel}`}
       aria-describedby={memberSummaryId}
       data-date={formatLocalDate(date)}
+      data-calendar-swipe-canvas="true"
       onClick={() => {
         cellRef.current?.focus();
         onFocusDay(date);

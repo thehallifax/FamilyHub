@@ -188,10 +188,10 @@ describe("MealsView", () => {
     vi.unstubAllGlobals();
   });
 
-  it("shows add affordances for empty breakfast, lunch, and dinner slots", async () => {
+  it("shows one compact add affordance per empty day and an explicit meal-type picker", async () => {
     seedMockMealsBoard(createEmptyMealsBoard());
 
-    renderWithUser(<MealsView />);
+    const { user } = renderWithUser(<MealsView />);
 
     expect(
       await screen.findByRole("heading", { name: "Meals" }),
@@ -199,26 +199,35 @@ describe("MealsView", () => {
     expect(screen.getByText("Jun 7 - Jun 13")).toBeInTheDocument();
     expect(
       await screen.findAllByRole("button", { name: /add .*meal/i }),
-    ).toHaveLength(21);
-    expect(
-      screen.getAllByRole("button", { name: /add breakfast/i }),
     ).toHaveLength(7);
-    expect(screen.getAllByRole("button", { name: /add lunch/i })).toHaveLength(
-      7,
+    expect(screen.getAllByText("No meals planned")).toHaveLength(7);
+
+    await user.click(
+      screen.getByRole("button", { name: "Add meal, Sunday, Jun 7" }),
     );
-    expect(screen.getAllByRole("button", { name: /add dinner/i })).toHaveLength(
-      7,
-    );
+    expect(
+      screen.getByRole("button", { name: "Add breakfast, Sunday, Jun 7" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add lunch, Sunday, Jun 7" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add dinner, Sunday, Jun 7" }),
+    ).toBeInTheDocument();
   });
 
   it("creates a quick meal from an empty slot", async () => {
     seedMockMealsBoard(createEmptyMealsBoard());
     const { user } = renderWithUser(<MealsView />);
 
-    const dinnerButtons = await screen.findAllByRole("button", {
-      name: /add dinner/i,
-    });
-    await user.click(dinnerButtons[0]);
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Add meal, Sunday, Jun 7",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Add dinner, Sunday, Jun 7" }),
+    );
     await user.type(screen.getByLabelText("Meal name"), "Leftovers");
     await user.click(screen.getByRole("button", { name: "Create quick meal" }));
 
@@ -236,10 +245,14 @@ describe("MealsView", () => {
     seedMockMealsBoard(createEmptyMealsBoard());
     const { user } = renderWithUser(<MealsView />);
 
-    const dinnerButtons = await screen.findAllByRole("button", {
-      name: /add dinner/i,
-    });
-    await user.click(dinnerButtons[0]);
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Add meal, Sunday, Jun 7",
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Add dinner, Sunday, Jun 7" }),
+    );
 
     expect(useAppStore.getState().idleReturnBlockers).toEqual({
       [IDLE_BLOCKER_MEALS_FLOW]: true,
@@ -265,7 +278,12 @@ describe("MealsView", () => {
     expect(useAppStore.getState().mealPlacementDraft).toBe(null);
 
     await user.click(
-      screen.getAllByRole("button", { name: /add recipe to dinner/i })[0],
+      screen.getByRole("button", { name: "Add meal, Sunday, Jun 7" }),
+    );
+    await user.click(
+      screen.getByRole("button", {
+        name: "Add recipe to dinner, Sunday, Jun 7",
+      }),
     );
     await user.click(
       screen.getByRole("button", { name: "Add recipe to slot" }),
@@ -306,10 +324,13 @@ describe("MealsView", () => {
     expect(
       screen.getByText(`Choose a meal slot for ${testRecipeDetail.title}`),
     ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Add meal, Sunday, Jun 14" }),
+    );
     expect(
-      (
-        await screen.findAllByRole("button", { name: /add recipe to dinner/i })
-      )[0],
+      screen.getByRole("button", {
+        name: "Add recipe to dinner, Sunday, Jun 14",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -343,14 +364,18 @@ describe("MealsView", () => {
     const { user } = renderWithUser(<MealsView />);
 
     expect(
-      (await screen.findAllByRole("button", { name: /add dinner/i }))[0],
+      await screen.findByRole("button", {
+        name: "Add meal, Sunday, Jun 7",
+      }),
     ).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: "Next week" }));
 
     expect(await screen.findByText("Jun 14 - Jun 20")).toBeInTheDocument();
     expect(
-      (await screen.findAllByRole("button", { name: /add dinner/i }))[0],
+      await screen.findByRole("button", {
+        name: "Add meal, Sunday, Jun 14",
+      }),
     ).toBeEnabled();
   });
 
@@ -1046,7 +1071,7 @@ describe("MealsView", () => {
     renderWithUser(<MealsView />);
 
     expect(
-      await screen.findAllByRole("button", { name: /add dinner/i }),
+      await screen.findAllByRole("button", { name: /add meal, /i }),
     ).toHaveLength(7);
     expect(
       screen.queryByRole("table", { name: "Weekly meals" }),

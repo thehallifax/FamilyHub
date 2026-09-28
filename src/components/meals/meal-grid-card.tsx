@@ -34,9 +34,10 @@ export function MealGridCard({
   onSelectSlot,
   dragEnabled = false,
 }: MealGridCardProps) {
+  const canDrag = dragEnabled && !readOnly && Boolean(slot.primary) && !draft;
   const draggable = useDraggable({
     id: `meal-source:${slot.dayIndex}:${slot.mealType}`,
-    disabled: !dragEnabled || readOnly || !slot.primary || Boolean(draft),
+    disabled: !canDrag,
   });
   const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
   const primary = draft
@@ -58,8 +59,8 @@ export function MealGridCard({
         {...draggable.listeners}
         className={cn(
           "flex h-full w-full flex-col overflow-hidden rounded-lg border border-border bg-card text-left shadow-sm transition-colors",
-          dragEnabled && slot.primary
-            ? "touch-manipulation cursor-grab active:cursor-grabbing"
+          canDrag
+            ? "touch-manipulation cursor-grab select-none [-webkit-touch-callout:none] [-webkit-user-select:none] active:cursor-grabbing"
             : null,
           readOnly ? "cursor-default" : "hover:bg-muted/50",
           isPlanningTarget

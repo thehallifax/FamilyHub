@@ -46,7 +46,7 @@ export function MealSlotCard({
       <button
         type="button"
         className={cn(
-          "w-full rounded-lg border border-border bg-card p-3 text-left shadow-sm transition-colors",
+          "w-full rounded-lg border border-border bg-card p-2.5 text-left shadow-sm transition-colors",
           readOnly ? "cursor-default" : "hover:bg-muted/50",
           isPlanningTarget
             ? "border-primary/70 bg-primary/5 ring-2 ring-primary/20"
@@ -62,16 +62,16 @@ export function MealSlotCard({
         })}
         onClick={() => onSelectSlot(slot)}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2.5">
           {imageUrl && imageUrl !== failedImageUrl ? (
             <img
               src={imageUrl}
               alt=""
-              className="h-14 w-14 rounded-md object-cover"
+              className="h-12 w-12 shrink-0 rounded-md object-cover"
               onError={() => setFailedImageUrl(imageUrl)}
             />
           ) : (
-            <div className="flex h-14 w-14 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
               {label}
             </div>
           )}
@@ -84,7 +84,7 @@ export function MealSlotCard({
                 Draft
               </span>
             ) : null}
-            <p className="truncate text-sm font-semibold text-foreground">
+            <p className="line-clamp-2 break-words text-sm font-semibold text-foreground">
               {primary?.title ?? "Extras"}
             </p>
             {primary?.note ? (
@@ -100,11 +100,11 @@ export function MealSlotCard({
           </div>
         </div>
         {hasExtras ? (
-          <div className="mt-3 flex flex-wrap gap-1">
+          <div className="mt-2 flex min-w-0 flex-wrap gap-1">
             {slot.extras.slice(0, 2).map((extra) => (
               <span
                 key={extra.id}
-                className="rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
+                className="max-w-full break-words rounded-full bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground"
               >
                 {extra.title}
               </span>

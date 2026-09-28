@@ -303,6 +303,38 @@ describe("MealGrid drag actions", () => {
     );
   });
 
+  it("suppresses native selection and callout only on draggable meal cards", () => {
+    const editableSelect = vi.fn();
+    const { unmount } = render(
+      <MealGrid
+        board={board()}
+        readOnly={false}
+        onSelectSlot={editableSelect}
+      />,
+    );
+    const draggableCard = screen.getByRole("button", {
+      name: /Open dinner, Sunday: Pasta/,
+    });
+
+    expect(draggableCard).toHaveClass(
+      "select-none",
+      "[-webkit-user-select:none]",
+      "[-webkit-touch-callout:none]",
+    );
+    fireEvent.click(draggableCard);
+    expect(editableSelect).toHaveBeenCalled();
+
+    unmount();
+    render(<MealGrid board={board()} readOnly onSelectSlot={vi.fn()} />);
+    expect(
+      screen.getByRole("button", { name: /Open dinner, Sunday: Pasta/ }),
+    ).not.toHaveClass(
+      "select-none",
+      "[-webkit-user-select:none]",
+      "[-webkit-touch-callout:none]",
+    );
+  });
+
   it("uses a movement threshold for mouse and a delayed, tolerant touch hold", () => {
     render(
       <MealGrid board={board()} readOnly={false} onSelectSlot={vi.fn()} />,

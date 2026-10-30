@@ -19,6 +19,7 @@ const MODULE_TITLES: Record<Exclude<ModuleType, "calendar">, string> = {
   meals: "Meals",
   recipes: "Recipes",
   photos: "Photos",
+  rewards: "Rewards",
 };
 
 export function AppHeader() {

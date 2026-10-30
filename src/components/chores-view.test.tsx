@@ -322,6 +322,7 @@ describe("ChoresView", () => {
         dueDayOfMonth: null,
         recurrenceAnchorDate: null,
         oneOffDueDate: null,
+        rewardPoints: 0,
         activeFrom: "2026-05-17",
       });
     });
@@ -374,6 +375,7 @@ describe("ChoresView", () => {
         dueDayOfMonth: null,
         recurrenceAnchorDate: null,
         oneOffDueDate: "2026-10-12",
+        rewardPoints: 0,
         activeFrom: "2026-05-17",
       });
     });
@@ -761,6 +763,7 @@ describe("ChoresView", () => {
         dueDayOfMonth: null,
         recurrenceAnchorDate: null,
         oneOffDueDate: "2026-10-20",
+        rewardPoints: 0,
       }),
     );
   });

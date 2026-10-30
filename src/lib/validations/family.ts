@@ -120,6 +120,7 @@ export const createMemberProfileSchema = (
         (val) => val === "" || z.string().email().safeParse(val).success,
         { message: "Please enter a valid email" },
       ),
+    rewardsEnabled: z.boolean(),
   });
 };
 
@@ -148,6 +149,7 @@ export const familyMemberSchema = z.object({
     .or(z.literal(""))
     .nullish()
     .transform((val) => val ?? undefined),
+  rewardsEnabled: z.boolean().optional().default(false),
 });
 
 /**

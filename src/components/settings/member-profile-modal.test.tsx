@@ -40,6 +40,26 @@ function seedFamily() {
 }
 
 describe("MemberProfileModal", () => {
+  it("can enable Rewards through the existing member profile", async () => {
+    seedFamily();
+    let capturedBody: UpdateMemberRequest | null = null;
+    const { server } = await import("@/test/mocks/server");
+    server.use(
+      http.put(`${API_BASE}/family/members/:id`, async ({ request }) => {
+        capturedBody = (await request.json()) as UpdateMemberRequest;
+        return HttpResponse.json({ data: { ...testMember, ...capturedBody } });
+      }),
+    );
+    const { user } = renderWithUser(
+      <MemberProfileModal open onOpenChange={vi.fn()} memberId="member-1" />,
+    );
+    await user.click(screen.getByRole("checkbox", { name: /enable rewards/i }));
+    await user.click(screen.getByRole("button", { name: /save changes/i }));
+    await waitFor(() =>
+      expect(capturedBody).toMatchObject({ rewardsEnabled: true }),
+    );
+  });
+
   it("form submit preserves avatarUrl from existing member data", async () => {
     seedFamily();
     let capturedBody: UpdateMemberRequest | null = null;

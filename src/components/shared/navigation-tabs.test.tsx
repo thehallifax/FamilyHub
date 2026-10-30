@@ -35,6 +35,9 @@ describe("NavigationTabs", () => {
     expect(
       screen.getByRole("button", { name: /^recipes$/i }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^rewards$/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders Home as a first-class desktop destination", () => {

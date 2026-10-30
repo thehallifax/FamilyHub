@@ -19,6 +19,7 @@ export interface FamilyMember {
   color: FamilyColor;
   avatarUrl?: string;
   email?: string;
+  rewardsEnabled?: boolean;
 }
 
 /**
@@ -138,6 +139,7 @@ export interface AddMemberRequest {
   color: FamilyColor;
   avatarUrl?: string;
   email?: string;
+  rewardsEnabled?: boolean;
 }
 
 /**
@@ -148,6 +150,7 @@ export interface UpdateMemberRequest {
   color: FamilyColor;
   avatarUrl?: string | null;
   email?: string;
+  rewardsEnabled?: boolean;
 }
 
 // Re-export unified response type

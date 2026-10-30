@@ -38,6 +38,7 @@ export interface ChoreBoardItem {
   completionAvailable?: boolean;
   dueDate?: string | null;
   dueState?: ChoreDueState;
+  rewardPoints?: number;
 }
 
 export interface ChoreAssigneeGroup {
@@ -82,6 +83,7 @@ export interface CreateChoreTemplateRequest {
   dueDayOfMonth?: number | null;
   recurrenceAnchorDate?: string | null;
   oneOffDueDate?: string | null;
+  rewardPoints?: number;
 }
 
 export interface UpdateChoreTemplateRequest {
@@ -94,6 +96,7 @@ export interface UpdateChoreTemplateRequest {
   dueDayOfMonth?: number | null;
   recurrenceAnchorDate?: string | null;
   oneOffDueDate?: string | null;
+  rewardPoints?: number;
 }
 
 export interface ChoreTemplate {
@@ -109,6 +112,7 @@ export interface ChoreTemplate {
   dueDayOfMonth?: number | null;
   recurrenceAnchorDate?: string | null;
   oneOffDueDate?: string | null;
+  rewardPoints: number;
 }
 
 export interface UpdateCurrentPeriodCompletionRequest {

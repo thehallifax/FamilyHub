@@ -95,6 +95,7 @@ export function ChoresView() {
           dueDayOfMonth: values.dueDayOfMonth ?? null,
           recurrenceAnchorDate: values.recurrenceAnchorDate ?? null,
           oneOffDueDate: values.oneOffDueDate ?? null,
+          rewardPoints: values.rewardPoints,
         },
       });
       return;
@@ -109,6 +110,7 @@ export function ChoresView() {
       dueDayOfMonth: values.dueDayOfMonth ?? null,
       recurrenceAnchorDate: values.recurrenceAnchorDate ?? null,
       oneOffDueDate: values.oneOffDueDate ?? null,
+      rewardPoints: values.rewardPoints,
       activeFrom,
     });
   };
@@ -302,6 +304,7 @@ export function ChoresView() {
                 dueDayOfMonth: editingChore.dueDayOfMonth ?? null,
                 recurrenceAnchorDate: editingChore.recurrenceAnchorDate ?? null,
                 oneOffDueDate: editingChore.oneOffDueDate ?? null,
+                rewardPoints: editingChore.rewardPoints,
               }
             : undefined
         }

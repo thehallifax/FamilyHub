@@ -55,7 +55,10 @@ describe("family hydration when use-family evaluates before family-store", () =>
       expect.anything(),
     );
     expect(queryClient.getQueryData(familyKeys.family())).toEqual({
-      data: storedFamily,
+      data: {
+        ...storedFamily,
+        members: [{ ...storedFamily.members[0], rewardsEnabled: false }],
+      },
     });
   });
 

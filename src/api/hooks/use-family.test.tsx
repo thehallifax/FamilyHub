@@ -43,12 +43,14 @@ const testMember1: FamilyMember = {
   id: "member-1",
   name: "Alice",
   color: "coral",
+  rewardsEnabled: false,
 };
 
 const testMember2: FamilyMember = {
   id: "member-2",
   name: "Bob",
   color: "teal",
+  rewardsEnabled: false,
 };
 
 const testFamily: FamilyData = {

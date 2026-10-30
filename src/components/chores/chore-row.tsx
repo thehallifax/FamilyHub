@@ -160,6 +160,11 @@ export function ChoreRow({
               {dueLabel}
             </span>
           )}
+          {(chore.rewardPoints ?? 0) > 0 && (
+            <span className="mt-1 text-xs font-semibold text-primary">
+              {chore.rewardPoints} pts
+            </span>
+          )}
         </span>
       </button>
 

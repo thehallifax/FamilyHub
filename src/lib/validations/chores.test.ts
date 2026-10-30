@@ -63,6 +63,7 @@ describe("choreFormSchema", () => {
         title: "Take out trash",
         assignedToMemberId: "member-1",
         cadence: "WEEKLY",
+        rewardPoints: 0,
       });
     }
   });

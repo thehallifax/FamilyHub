@@ -45,6 +45,9 @@ const ListsView = lazy(() =>
 const PhotosView = lazy(() =>
   import("@/components/photos-view").then((m) => ({ default: m.PhotosView })),
 );
+const RewardsView = lazy(() =>
+  import("@/components/rewards-view").then((m) => ({ default: m.RewardsView })),
+);
 const OnboardingFlow = lazy(() =>
   import("@/components/onboarding").then((m) => ({
     default: m.OnboardingFlow,
@@ -90,6 +93,12 @@ function renderModule(activeModule: ModuleType | null) {
       return (
         <LazyModule label="photos">
           <PhotosView />
+        </LazyModule>
+      );
+    case "rewards":
+      return (
+        <LazyModule label="rewards">
+          <RewardsView />
         </LazyModule>
       );
     default:

@@ -346,6 +346,10 @@ export function useUpdateMember(callbacks?: UpdateMemberCallbacks) {
                       : m.avatarUrl,
                   email:
                     variables.email !== undefined ? variables.email : m.email,
+                  rewardsEnabled:
+                    variables.rewardsEnabled !== undefined
+                      ? variables.rewardsEnabled
+                      : m.rewardsEnabled,
                 }
               : m,
           ),

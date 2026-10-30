@@ -53,6 +53,7 @@ export function MemberProfileModal({
       name: member?.name ?? "",
       color: member?.color ?? "coral",
       email: member?.email ?? "",
+      rewardsEnabled: member?.rewardsEnabled ?? false,
     },
   });
 
@@ -65,6 +66,7 @@ export function MemberProfileModal({
         name: member.name,
         color: member.color,
         email: member.email ?? "",
+        rewardsEnabled: member.rewardsEnabled ?? false,
       });
     }
   }, [member, reset]);
@@ -83,6 +85,7 @@ export function MemberProfileModal({
       color: data.color,
       email: data.email || undefined,
       avatarUrl: member.avatarUrl ?? undefined,
+      rewardsEnabled: data.rewardsEnabled,
     });
     onOpenChange(false);
   };
@@ -114,6 +117,7 @@ export function MemberProfileModal({
         color: member.color,
         email: member.email ?? undefined,
         avatarUrl: base64,
+        rewardsEnabled: member.rewardsEnabled ?? false,
       });
     };
     reader.readAsDataURL(file);
@@ -126,6 +130,7 @@ export function MemberProfileModal({
       color: member.color,
       email: member.email ?? undefined,
       avatarUrl: null,
+      rewardsEnabled: member.rewardsEnabled ?? false,
     });
   };
 
@@ -258,6 +263,21 @@ export function MemberProfileModal({
             </p>
           )}
         </div>
+
+        {/* Google Calendar */}
+        <label className="flex min-h-11 items-center gap-3 rounded-lg border border-border p-3">
+          <input
+            type="checkbox"
+            {...register("rewardsEnabled")}
+            className="h-5 w-5 accent-primary"
+          />
+          <span>
+            <span className="block text-sm font-medium">Enable Rewards</span>
+            <span className="block text-xs text-muted-foreground">
+              Include this member in points and reward redemption.
+            </span>
+          </span>
+        </label>
 
         {/* Google Calendar */}
         <GoogleCalendarSection

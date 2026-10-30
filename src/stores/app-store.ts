@@ -6,7 +6,8 @@ export type ModuleType =
   | "chores"
   | "meals"
   | "recipes"
-  | "photos";
+  | "photos"
+  | "rewards";
 
 export type MealType = "breakfast" | "lunch" | "dinner";
 

@@ -31,6 +31,7 @@ export const choreFormSchema = z
     dueDayOfMonth: z.number().int().min(1).max(31).nullable().optional(),
     recurrenceAnchorDate: z.string().nullable().optional(),
     oneOffDueDate: z.string().nullable().optional(),
+    rewardPoints: z.coerce.number().int().min(0).max(10000).default(0),
   })
   .superRefine((value, context) => {
     if (

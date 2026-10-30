@@ -40,6 +40,7 @@ export function ChoreForm({
   const defaultDueDayOfMonth = defaultValues?.dueDayOfMonth;
   const defaultRecurrenceAnchorDate = defaultValues?.recurrenceAnchorDate;
   const defaultOneOffDueDate = defaultValues?.oneOffDueDate;
+  const defaultRewardPoints = defaultValues?.rewardPoints;
   const [cadenceChanged, setCadenceChanged] = useState(false);
 
   const initialValues = useMemo(
@@ -52,6 +53,7 @@ export function ChoreForm({
       dueDayOfMonth: defaultDueDayOfMonth ?? null,
       recurrenceAnchorDate: defaultRecurrenceAnchorDate ?? null,
       oneOffDueDate: defaultOneOffDueDate ?? null,
+      rewardPoints: defaultRewardPoints ?? 0,
     }),
     [
       defaultTitle,
@@ -61,6 +63,7 @@ export function ChoreForm({
       defaultDueDayOfMonth,
       defaultRecurrenceAnchorDate,
       defaultOneOffDueDate,
+      defaultRewardPoints,
       familyMembers,
     ],
   );
@@ -308,6 +311,25 @@ export function ChoreForm({
           <FormError message={errors.oneOffDueDate?.message} />
         </div>
       )}
+
+      <div className="space-y-2">
+        <Label htmlFor="chore-reward-points">Reward points</Label>
+        <Input
+          id="chore-reward-points"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={10000}
+          {...register("rewardPoints")}
+          className={cn(
+            "min-h-11 bg-input",
+            errors.rewardPoints && "border-destructive",
+          )}
+          aria-invalid={!!errors.rewardPoints}
+        />
+        <p className="text-xs text-muted-foreground">Zero means no points.</p>
+        <FormError message={errors.rewardPoints?.message} />
+      </div>
 
       <div className="flex gap-3 pt-3">
         {!hideCancelButton && (

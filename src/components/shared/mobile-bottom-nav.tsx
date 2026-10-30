@@ -2,6 +2,7 @@ import {
   BookOpenText,
   Calendar,
   CheckSquare,
+  Gift,
   Home,
   ListTodo,
   type LucideIcon,
@@ -24,6 +25,7 @@ const MODULES: NavModule[] = [
   { id: "calendar", label: "Calendar", icon: Calendar },
   { id: "lists", label: "Lists", icon: ListTodo },
   { id: "chores", label: "Chores", icon: CheckSquare },
+  { id: "rewards", label: "Rewards", icon: Gift },
   { id: "meals", label: "Meals", icon: UtensilsCrossed },
   { id: "recipes", label: "Recipes", icon: BookOpenText },
 ];

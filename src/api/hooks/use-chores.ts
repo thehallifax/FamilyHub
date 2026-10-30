@@ -15,6 +15,7 @@ import type {
   UpdateChoreTemplateRequest,
   UpdateCurrentPeriodCompletionRequest,
 } from "@/lib/types";
+import { rewardKeys } from "./use-rewards";
 
 export const choreKeys = {
   all: ["chores"] as const,
@@ -303,6 +304,7 @@ export function useCompleteChoreForCurrentPeriod(
       return { previous };
     },
     onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: rewardKeys.all });
       queryClient.setQueryData<ApiResponse<ChoresBoard>>(
         choreKeys.board(),
         (current) =>
@@ -372,6 +374,7 @@ export function useUncompleteChoreForCurrentPeriod(
       return { previous };
     },
     onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: rewardKeys.all });
       queryClient.setQueryData<ApiResponse<ChoresBoard>>(
         choreKeys.board(),
         (current) =>

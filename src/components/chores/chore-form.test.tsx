@@ -56,9 +56,29 @@ describe("ChoreForm", () => {
           dueDayOfMonth: null,
           recurrenceAnchorDate: null,
           oneOffDueDate: null,
+          rewardPoints: 0,
         });
       },
       { timeout: TEST_TIMEOUTS.FORM_SUBMIT },
+    );
+  });
+
+  it("submits an optional non-negative reward point value", async () => {
+    const { user } = renderWithUser(
+      <ChoreForm
+        defaultValues={{ title: "Bins", assignedToMemberId: "member-1" }}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+      />,
+    );
+    const points = screen.getByLabelText(/reward points/i);
+    await user.clear(points);
+    await user.type(points, "10");
+    await user.click(screen.getByRole("button", { name: /save chore/i }));
+    await waitFor(() =>
+      expect(onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ rewardPoints: 10 }),
+      ),
     );
   });
 

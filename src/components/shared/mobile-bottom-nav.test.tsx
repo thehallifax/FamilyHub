@@ -32,6 +32,9 @@ describe("MobileBottomNav", () => {
     await user.click(screen.getByRole("button", { name: /^more$/i }));
 
     const meals = await screen.findByRole("button", { name: /^meals$/i });
+    expect(
+      screen.getByRole("button", { name: /^rewards$/i }),
+    ).toBeInTheDocument();
     await user.click(meals);
 
     expect(useAppStore.getState().activeModule).toBe("meals");

@@ -112,3 +112,13 @@ export {
   useRecipes,
   useUpdateRecipe,
 } from "./use-recipes";
+
+export {
+  rewardKeys,
+  useAdjustRewardPoints,
+  useCreateReward,
+  useRedeemReward,
+  useRewardHistory,
+  useRewardsOverview,
+  useUpdateReward,
+} from "./use-rewards";

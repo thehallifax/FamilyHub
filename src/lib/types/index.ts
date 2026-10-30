@@ -8,3 +8,4 @@ export * from "./google-calendar";
 export * from "./lists";
 export * from "./meals";
 export * from "./recipes";
+export * from "./rewards";

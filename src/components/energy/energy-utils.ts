@@ -110,17 +110,23 @@ export function connectionLabel(connection: EnergyConnection): string {
     return "Provider backoff or recent rate limit";
   if (connection.lastOutcome === "COLLECTING") return "Collecting";
   if (!connection.collectionEnabled) return "Collection paused";
-  if (connection.status === "TEMPORARY_ERROR") return "Temporarily unavailable";
+  if (connection.status === "TEMPORARY_ERROR") return "Connection issue";
   if (connection.status === "DISCONNECTED") return "Disconnected";
   if (connection.status === "CONFIGURED") return "Awaiting first collection";
   return "Connected";
 }
 
-export function freshness(
-  timestamp: string | null,
-  now: Date,
-  interval: number | null,
-): string {
+export function freshness(connection: EnergyConnection, now: Date): string {
+  const timestamp = connection.lastSuccessAt;
+  if (connectionLabel(connection) !== "Connected") {
+    return timestamp
+      ? "Last successful collection recorded"
+      : "No successful collection yet";
+  }
+  if (connection.daylightState === "BEFORE_SUNRISE")
+    return "Waiting for sunrise";
+  if (connection.daylightState === "AFTER_SUNSET")
+    return "Paused until sunrise";
   if (!timestamp) return "No successful collection yet";
   const minutes = Math.max(
     0,
@@ -133,5 +139,17 @@ export function freshness(
       : minutes < 60
         ? `${minutes} min ago`
         : `${Math.floor(minutes / 60)} hr ago`;
-  return `Last collected ${age}${minutes > (interval ?? 30) * 2 ? " · may be stale" : ""}`;
+  if (connection.daylightState !== "DAYLIGHT")
+    return `Last collected ${age} · daylight status unavailable`;
+  const sunrise = connection.sunriseAt ? Date.parse(connection.sunriseAt) : NaN;
+  const reference = Number.isFinite(sunrise)
+    ? Math.max(Date.parse(timestamp), sunrise)
+    : Date.parse(timestamp);
+  const overdue =
+    now.getTime() - reference >
+    (connection.pollIntervalMinutes ?? 30) * 2 * 60_000;
+  if (overdue) return `Last collected ${age} · data may be stale`;
+  if (Number.isFinite(sunrise) && Date.parse(timestamp) < sunrise)
+    return `Waiting for first daylight collection · Last collected ${age}`;
+  return `Updated recently · Last collected ${age}`;
 }

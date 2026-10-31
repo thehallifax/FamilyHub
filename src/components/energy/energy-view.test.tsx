@@ -35,6 +35,8 @@ const connection: EnergyConnection = {
   errorCode: null,
   collectionEnabled: true,
   lastOutcome: "SUCCESS",
+  daylightState: "DAYLIGHT",
+  sunriseAt: "2026-10-30T01:00:00Z",
 };
 const row: EnergyObservation = {
   siteId: 1,
@@ -91,6 +93,21 @@ describe("EnergyView", () => {
     expect(await screen.findByText(/14 estimated credits/)).toBeInTheDocument();
     expect(screen.getByText(/not the SolarEdge account/)).toBeInTheDocument();
     expect(screen.getByText(/not instantaneous power/i)).toBeInTheDocument();
+  });
+
+  it("does not show yesterday's observation as today's energy", async () => {
+    server.use(
+      http.get(`${API_BASE}/energy/latest`, () =>
+        HttpResponse.json({
+          data: { ...row, periodStart: "2026-10-29T00:00:00Z" },
+        }),
+      ),
+    );
+    renderWithUser(<EnergyView />);
+    expect(
+      await screen.findByText("No measurements for today are available yet."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("2026-10-30")).toBeInTheDocument();
   });
 
   it("supports history range controls and responsive grids", async () => {
@@ -321,7 +338,33 @@ describe("energy presentation", () => {
       connectionLabel({ ...connection, status: "REAUTHORISATION_REQUIRED" }),
     ).toContain("Reauthorisation");
     expect(
-      freshness("2026-10-30T02:00:00Z", new Date("2026-10-30T05:00:00Z"), 30),
+      freshness(
+        { ...connection, lastSuccessAt: "2026-10-30T02:00:00Z" },
+        new Date("2026-10-30T05:00:00Z"),
+      ),
     ).toContain("stale");
+  });
+
+  it("uses authoritative daylight status without overnight stale warnings", () => {
+    const now = new Date("2026-10-30T05:00:00Z");
+    const old = { ...connection, lastSuccessAt: "2026-10-29T12:00:00Z" };
+    expect(freshness({ ...old, daylightState: "BEFORE_SUNRISE" }, now)).toBe(
+      "Waiting for sunrise",
+    );
+    expect(freshness({ ...old, daylightState: "AFTER_SUNSET" }, now)).toBe(
+      "Paused until sunrise",
+    );
+    expect(freshness({ ...old, daylightState: undefined }, now)).toContain(
+      "daylight status unavailable",
+    );
+    expect(
+      freshness({ ...old, sunriseAt: "2026-10-30T04:55:00Z" }, now),
+    ).not.toContain("stale");
+    expect(
+      freshness({ ...old, sunriseAt: "2026-10-30T03:00:00Z" }, now),
+    ).toContain("stale");
+    expect(freshness({ ...old, status: "TEMPORARY_ERROR" }, now)).not.toContain(
+      "sunrise",
+    );
   });
 });

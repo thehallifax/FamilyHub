@@ -14,6 +14,8 @@ export interface EnergyConnection {
   errorCode: string | null;
   collectionEnabled: boolean;
   lastOutcome: string | null;
+  daylightState?: "BEFORE_SUNRISE" | "DAYLIGHT" | "AFTER_SUNSET" | "UNKNOWN";
+  sunriseAt?: string | null;
 }
 
 export interface EnergyObservation {

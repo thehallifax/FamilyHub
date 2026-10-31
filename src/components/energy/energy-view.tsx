@@ -67,6 +67,7 @@ export function EnergyView() {
   const today =
     observation &&
     timezone &&
+    observation.siteId === info.siteId &&
     observation.measurementKind === "DAILY_CUMULATIVE" &&
     observation.siteTimezone === timezone &&
     siteDay(observation.periodStart, timezone) === siteDay(now, timezone)
@@ -98,7 +99,7 @@ export function EnergyView() {
         >
           <h2 className="font-semibold">{connectionLabel(info)}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {freshness(info.lastSuccessAt, now, info.pollIntervalMinutes)}
+            {freshness(info, now)}
           </p>
           {!info.configured && (
             <p className="mt-2 text-sm">

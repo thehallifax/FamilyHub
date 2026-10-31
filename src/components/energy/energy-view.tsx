@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useDashboardNow } from "@/components/home/hooks/use-hero-state";
 import { cn } from "@/lib/utils";
 import { type EnergyObservation, energyApi } from "./energy-api";
+import { EnergyFlow } from "./energy-flow";
+import { EnergyHistory } from "./energy-history";
 import {
   connectionLabel,
   energyValue,
@@ -158,40 +160,7 @@ export function EnergyView() {
                 </p>
               )}
             </section>
-            <section
-              className="rounded-xl border bg-card p-4"
-              aria-labelledby="energy-flow"
-            >
-              <h2 id="energy-flow" className="text-lg font-semibold">
-                Energy flow
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Cumulative energy for today’s reporting period, not
-                instantaneous power.
-              </p>
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {[
-                  {
-                    label: "Solar → self-consumption",
-                    value: today?.selfConsumptionKwh,
-                  },
-                  { label: "Solar → grid export", value: today?.gridExportKwh },
-                  {
-                    label: "Grid import → household",
-                    value: today?.gridImportKwh,
-                  },
-                ].map(({ label, value }) => (
-                  <div key={label} className="rounded-lg bg-muted/50 p-3">
-                    <p className="text-sm">{label}</p>
-                    <p className="font-semibold">{energyValue(value)}</p>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Solar supplies the household or exports to the grid; the grid
-                also supplies the household.
-              </p>
-            </section>
+            <EnergyFlow observation={today || null} />
             <section
               className="rounded-xl border bg-card p-4"
               aria-labelledby="energy-history"
@@ -247,26 +216,13 @@ export function EnergyView() {
                   days may be missing.
                 </p>
               )}
-              <ul className="mt-3 divide-y">
-                {snapshots.map(([day, row]) => (
-                  <li
-                    key={day}
-                    className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-3 text-sm"
-                  >
-                    <span className="font-medium">{day}</span>
-                    <span>Solar: {energyValue(row.productionKwh)}</span>
-                    <span>Home: {energyValue(row.consumptionKwh)}</span>
-                    <span className="text-muted-foreground">
-                      Through{" "}
-                      {new Date(row.periodEnd).toLocaleTimeString([], {
-                        hour: "numeric",
-                        minute: "2-digit",
-                        timeZone: timezone ?? undefined,
-                      })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {timezone && snapshots.length > 0 && (
+                <EnergyHistory
+                  snapshots={snapshots}
+                  timezone={timezone}
+                  days={days}
+                />
+              )}
             </section>
             <section className="rounded-xl border bg-card p-4">
               <h2 className="font-semibold">FamilyHub API usage</h2>

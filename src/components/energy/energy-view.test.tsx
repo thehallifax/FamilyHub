@@ -9,8 +9,11 @@ import {
 } from "./energy-api";
 import {
   connectionLabel,
+  energyPercent,
   energyValue,
+  flowValues,
   freshness,
+  isIncompleteDay,
   latestDailySnapshots,
 } from "./energy-utils";
 import { EnergyView } from "./energy-view";
@@ -103,6 +106,53 @@ describe("EnergyView", () => {
     ).toHaveClass("min-w-0");
   });
 
+  it("renders directional flow and an honest single-day snapshot", async () => {
+    server.use(
+      http.get(`${API_BASE}/energy/latest`, () =>
+        HttpResponse.json({
+          data: {
+            ...row,
+            productionKwh: 10,
+            consumptionKwh: 20,
+            selfConsumptionKwh: 5,
+            gridExportKwh: 5,
+            gridImportKwh: 15,
+          },
+        }),
+      ),
+    );
+    const { user } = renderWithUser(<EnergyView />);
+    expect(
+      await screen.findByLabelText("Solar → household self-consumption: 5 kWh"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Grid import → household consumption: 15 kWh"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("50.0%")).toBeInTheDocument();
+    expect(screen.getByText("25.0%")).toBeInTheDocument();
+    expect(screen.getByText("75.0%")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Day" }));
+    expect(
+      await screen.findByLabelText("Daily energy snapshot"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Partial snapshot through/)).toBeInTheDocument();
+  });
+
+  it("shows a clear empty history rather than fabricating readings", async () => {
+    server.use(
+      http.get(`${API_BASE}/energy/history`, () =>
+        HttpResponse.json({ data: [] }),
+      ),
+    );
+    renderWithUser(<EnergyView />);
+    expect(
+      await screen.findByText("No stored measurements for this period."),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Daily energy history chart"),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows a loading state while the connection is being retrieved", async () => {
     server.use(
       http.get(`${API_BASE}/energy/connection`, async () => {
@@ -173,6 +223,64 @@ describe("EnergyView", () => {
 });
 
 describe("energy presentation", () => {
+  it("calculates cumulative ratios safely", () => {
+    expect(energyPercent(1, 3)).toBe("33.3%");
+    expect(energyPercent(0, 5)).toBe("0.0%");
+    for (const denominator of [0, null, undefined, Number.NaN])
+      expect(energyPercent(1, denominator)).toBe("Unavailable");
+    expect(energyPercent(null, 4)).toBe("Unavailable");
+  });
+
+  it("maps each directional flow to its own measurement", () => {
+    expect(
+      flowValues({
+        ...row,
+        selfConsumptionKwh: 1,
+        gridExportKwh: 2,
+        gridImportKwh: 3,
+      }).map((flow) => flow.value),
+    ).toEqual([1, 2, 3]);
+    expect(flowValues(null).every((flow) => flow.value === undefined)).toBe(
+      true,
+    );
+  });
+
+  it("chooses the latest valid site-local day snapshot and marks partial days", () => {
+    const perth = {
+      ...row,
+      siteTimezone: "Australia/Perth",
+      periodStart: "2026-10-29T16:00:00Z",
+      periodEnd: "2026-10-30T04:00:00Z",
+      collectedAt: "2026-10-30T04:00:01Z",
+    };
+    const latest = {
+      ...perth,
+      periodEnd: "2026-10-30T06:00:00Z",
+      collectedAt: "2026-10-30T06:00:01Z",
+      productionKwh: 2,
+    };
+    const invalid = {
+      ...latest,
+      periodEnd: "2026-10-30T07:00:00Z",
+      productionKwh: null,
+      consumptionKwh: null,
+    };
+    const selected = latestDailySnapshots(
+      [perth, latest, invalid],
+      1,
+      "Australia/Perth",
+      1,
+      new Date("2026-10-30T07:10:00Z"),
+    );
+    expect(selected).toEqual([["2026-10-30", latest]]);
+    expect(isIncompleteDay(latest, "Australia/Perth")).toBe(true);
+    expect(
+      isIncompleteDay(
+        { ...latest, periodEnd: "2026-10-30T16:00:00Z" },
+        "Australia/Perth",
+      ),
+    ).toBe(false);
+  });
   it("does not add cumulative snapshots or mix sites", () => {
     const rows = [
       row,

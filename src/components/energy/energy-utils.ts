@@ -28,7 +28,14 @@ export function latestDailySnapshots(
     if (
       row.siteId !== siteId ||
       row.siteTimezone !== timezone ||
-      row.measurementKind !== "DAILY_CUMULATIVE"
+      row.measurementKind !== "DAILY_CUMULATIVE" ||
+      !Number.isFinite(Date.parse(row.periodStart)) ||
+      !Number.isFinite(Date.parse(row.periodEnd)) ||
+      !Number.isFinite(Date.parse(row.collectedAt)) ||
+      Date.parse(row.periodEnd) <= Date.parse(row.periodStart) ||
+      ![row.productionKwh, row.consumptionKwh].some(
+        (value) => value != null && Number.isFinite(value) && value >= 0,
+      )
     )
       continue;
     const day = siteDay(row.periodStart, timezone);
@@ -37,12 +44,44 @@ export function latestDailySnapshots(
     if (
       !previous ||
       Date.parse(row.periodEnd) > Date.parse(previous.periodEnd) ||
-      (row.periodEnd === previous.periodEnd &&
+      (Date.parse(row.periodEnd) === Date.parse(previous.periodEnd) &&
         Date.parse(row.collectedAt) > Date.parse(previous.collectedAt))
     )
       selected.set(day, row);
   }
   return [...selected.entries()].sort(([a], [b]) => b.localeCompare(a));
+}
+
+export function energyPercent(
+  numerator: number | null | undefined,
+  denominator: number | null | undefined,
+): string {
+  if (
+    numerator == null ||
+    denominator == null ||
+    !Number.isFinite(numerator) ||
+    !Number.isFinite(denominator) ||
+    numerator < 0 ||
+    denominator <= 0
+  )
+    return "Unavailable";
+  return `${((numerator / denominator) * 100).toFixed(1)}%`;
+}
+
+/** A snapshot is complete only if its period reaches the next site-local day. */
+export function isIncompleteDay(row: EnergyObservation, timezone: string) {
+  return siteDay(row.periodEnd, timezone) <= siteDay(row.periodStart, timezone);
+}
+
+export function flowValues(row: EnergyObservation | null | undefined) {
+  return [
+    {
+      label: "Solar → household self-consumption",
+      value: row?.selfConsumptionKwh,
+    },
+    { label: "Solar → grid export", value: row?.gridExportKwh },
+    { label: "Grid import → household consumption", value: row?.gridImportKwh },
+  ];
 }
 
 export function energyValue(value: number | null | undefined): string {

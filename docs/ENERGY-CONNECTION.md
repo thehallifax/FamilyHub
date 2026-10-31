@@ -82,6 +82,20 @@ budget are stored on the connection. Set `energy.global-safety-budget`
 billing anniversary. The separate conservative rolling limit also applies.
 Compose passes the `ENERGY_*` values in `.env.example` to the backend;
 the defaults do not establish the actual provider billing cycle or balance.
+
+The first controlled staging collection on 31 October 2026 successfully
+refreshed credentials, stored one daily-cumulative site overview observation,
+and recorded one estimated overview credit. The stored period began at midnight
+in the configured site timezone. The deployed billing-cycle day `1` and
+timezone `UTC` are **provisional** until the developer account's actual billing
+anniversary and timezone are verified. The 1,500-credit FamilyHub limit is a
+local safety estimate, not the provider account's remaining balance. The API
+does not echo the overview's reporting period, so the stored bounds describe
+the requested period; they do not independently prove how the provider applied
+those bounds. SolarEdge `external_id` correlation succeeded in the controlled
+authorization, but that observation alone does not prove authorization-code
+binding. No secrets or household measurements belong in this document.
+
 The site timezone must match the SolarEdge site. Observations are cumulative
 snapshots from site-local midnight, not independent intervals or live power.
 An overview 403 blocks collection for that household until an administrator

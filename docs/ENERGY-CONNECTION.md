@@ -72,6 +72,17 @@ Collection defaults to every 30 minutes per connection. Set
 `ENERGY_POLL_INTERVAL_MINUTES` (30–1440) before importing a new connection;
 reimporting an existing connection preserves its existing interval. The site
 timezone is the importer's required timezone argument, not a global setting.
+
+A proposed 15-minute daylight-only schedule is **not yet deployed** and needs
+verified site coordinates. At four overview requests per daylight hour, a
+30-day month with 12 hours of daylight per day would use roughly 1,440 overview
+credits; a 31-day month averaging 13 hours would use roughly 1,612. Actual
+counts vary with sunrise, sunset, scheduler timing and failures. With the
+existing 1,500-credit safety limit, collection stops when either the configured
+billing-cycle or rolling-window limit is reached; it resumes when both limits
+permit it. The locally counted estimate is not SolarEdge's account-wide
+remaining balance, which can also be consumed by other applications. Token
+refresh credit cost is not verified.
 The scheduler checks
 eligibility every 60 seconds after a 60-second initial delay; these checks can
 be configured with `energy.scheduler-delay-ms` and

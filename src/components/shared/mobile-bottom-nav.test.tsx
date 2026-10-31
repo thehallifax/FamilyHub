@@ -76,6 +76,13 @@ describe("MobileBottomNav", () => {
     );
   });
 
+  it("opens Energy from More", async () => {
+    const { user } = renderWithUser(<MobileBottomNav />);
+    await user.click(screen.getByRole("button", { name: /^more$/i }));
+    await user.click(screen.getByRole("button", { name: /^energy$/i }));
+    expect(useAppStore.getState().activeModule).toBe("energy");
+  });
+
   it("gives nav tabs press feedback", () => {
     render(<MobileBottomNav />);
     expect(

@@ -7,7 +7,8 @@ export type ModuleType =
   | "meals"
   | "recipes"
   | "photos"
-  | "rewards";
+  | "rewards"
+  | "energy";
 
 export type MealType = "breakfast" | "lunch" | "dinner";
 

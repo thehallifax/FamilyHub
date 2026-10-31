@@ -8,6 +8,7 @@ import {
   type LucideIcon,
   MoreHorizontal,
   UtensilsCrossed,
+  Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { MobileSheet } from "@/components/ui/mobile-sheet";
@@ -28,6 +29,7 @@ const MODULES: NavModule[] = [
   { id: "rewards", label: "Rewards", icon: Gift },
   { id: "meals", label: "Meals", icon: UtensilsCrossed },
   { id: "recipes", label: "Recipes", icon: BookOpenText },
+  { id: "energy", label: "Energy", icon: Zap },
 ];
 const PRIMARY_COUNT = 4;
 const primaryModules = MODULES.slice(0, PRIMARY_COUNT);

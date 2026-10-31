@@ -8,6 +8,7 @@ import {
   ListTodo,
   type LucideIcon,
   UtensilsCrossed,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type ModuleType, useAppStore } from "@/stores";
@@ -30,6 +31,7 @@ const tabs: DesktopNavItem[] = [
   { id: "meals", label: "Meals", icon: UtensilsCrossed },
   { id: "recipes", label: "Recipes", icon: BookOpenText },
   { id: "photos", label: "Photos", icon: ImageIcon },
+  { id: "energy", label: "Energy", icon: Zap },
 ];
 
 export function NavigationTabs() {
@@ -39,7 +41,7 @@ export function NavigationTabs() {
   return (
     <nav
       aria-label="Primary"
-      className="flex w-20 flex-col items-center gap-2 py-6 bg-card border-r border-border shrink-0"
+      className="flex w-20 flex-col items-center gap-2 overflow-y-auto py-6 bg-card border-r border-border shrink-0"
     >
       {tabs.map((tab) => {
         const Icon = tab.icon;

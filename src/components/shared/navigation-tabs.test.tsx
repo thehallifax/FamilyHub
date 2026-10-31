@@ -47,6 +47,12 @@ describe("NavigationTabs", () => {
     expect(screen.getByRole("button", { name: /^home$/i })).toBeInTheDocument();
   });
 
+  it("opens Energy from the desktop rail", async () => {
+    const { user } = renderWithUser(<NavigationTabs />);
+    await user.click(screen.getByRole("button", { name: /^energy$/i }));
+    expect(useAppStore.getState().activeModule).toBe("energy");
+  });
+
   it("marks Home active and switches to activeModule null", async () => {
     useAppStore.setState({ activeModule: "calendar", isSidebarOpen: false });
     const { user } = renderWithUser(<NavigationTabs />);

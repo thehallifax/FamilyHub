@@ -69,8 +69,8 @@ administrative recovery, not a retry.
 FamilyHub's own credit records are estimates and cannot account for other
 clients on the SolarEdge developer account.
 
-Once the daylight-scheduling backend is deployed, new connections default to a
-15-minute interval; migration V31 preserves existing connections' intervals.
+New connections default to a 15-minute interval; migration V31 preserves
+existing connections' intervals.
 The administrator must explicitly update the intended existing connection to
 15 minutes after a backup and V31 migration. Reimporting preserves the current
 interval. Set `ENERGY_DAYLIGHT_SITE_ID`, `ENERGY_DAYLIGHT_LATITUDE`, and
@@ -93,6 +93,13 @@ The counted estimate is not the provider's remaining account balance, which
 can also be consumed by other applications. Token-refresh credit cost is not
 verified. Billing day and timezone determine reporting only and remain
 provisional until verified against the developer account.
+
+On 31 October 2026 the trusted-LAN staging installation was upgraded to the
+daylight scheduler, V31 was applied, and the existing connection was explicitly
+set to 15 minutes. Its approved installation coordinates are configured only in
+the ignored deployment environment; the site timezone remains Australia/Perth.
+The local 1,500-credit cutoff is no longer enforced. Provider quota and backoff
+protections still apply, and estimated usage is not the provider account balance.
 
 The first controlled staging collection on 31 October 2026 successfully
 refreshed credentials, stored one daily-cumulative site overview observation,

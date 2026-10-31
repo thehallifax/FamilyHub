@@ -85,7 +85,7 @@ export function EnergyView() {
 
   return (
     <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="mx-auto max-w-[1250px] space-y-6">
         <header>
           <h1 className="text-2xl font-semibold">Energy</h1>
           <p className="text-sm text-muted-foreground">
@@ -124,7 +124,7 @@ export function EnergyView() {
               {latest.isLoading ? (
                 <p>Loading measurements…</p>
               ) : (
-                <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                   {metrics.map(({ label, field }) => (
                     <div
                       key={field}

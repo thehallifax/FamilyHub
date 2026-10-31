@@ -104,6 +104,13 @@ describe("EnergyView", () => {
     expect(
       screen.getAllByText("Solar production")[0].parentElement,
     ).toHaveClass("min-w-0");
+    expect(
+      screen.getAllByText("Solar production")[0].parentElement?.parentElement,
+    ).toHaveClass("xl:grid-cols-5");
+    expect(
+      screen.getByRole("heading", { name: "Energy", level: 1 }).parentElement
+        ?.parentElement,
+    ).toHaveClass("max-w-[1250px]");
   });
 
   it("renders directional flow and an honest single-day snapshot", async () => {

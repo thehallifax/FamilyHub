@@ -64,43 +64,42 @@ provider requests after its initial delay if the connection is eligible.
 The service refreshes on demand when an access token has five minutes or less
 remaining. Token maintenance also runs independently of collection after seven
 days without maintenance or a credential update, including while collection is
-paused. An ambiguous refresh requires administrative recovery, not a retry.
+paused, but only inside the daylight window. An ambiguous refresh requires
+administrative recovery, not a retry.
 FamilyHub's own credit records are estimates and cannot account for other
 clients on the SolarEdge developer account.
 
-Collection defaults to every 30 minutes per connection. Set
-`ENERGY_POLL_INTERVAL_MINUTES` (30–1440) before importing a new connection;
-reimporting an existing connection preserves its existing interval. The site
-timezone is the importer's required timezone argument, not a global setting.
+Once the daylight-scheduling backend is deployed, new connections default to a
+15-minute interval; migration V31 preserves existing connections' intervals.
+The administrator must explicitly update the intended existing connection to
+15 minutes after a backup and V31 migration. Reimporting preserves the current
+interval. Set `ENERGY_DAYLIGHT_SITE_ID`, `ENERGY_DAYLIGHT_LATITUDE`, and
+`ENERGY_DAYLIGHT_LONGITUDE` privately in the deployment environment using the
+verified installation location. Never guess a location. Missing configuration,
+a different site ID, invalid coordinates, or an unavailable sunrise/sunset
+calculation prevents overview collection. Sunrise and sunset are computed
+locally using the site's stored timezone; no sunrise service is contacted.
 
-A proposed 15-minute daylight-only schedule is **not yet deployed** and needs
-verified site coordinates. At four overview requests per daylight hour, a
-30-day month with 12 hours of daylight per day would use roughly 1,440 overview
-credits; a 31-day month averaging 13 hours would use roughly 1,612. Actual
-counts vary with sunrise, sunset, scheduler timing and failures. With the
-existing 1,500-credit safety limit, collection stops when either the configured
-billing-cycle or rolling-window limit is reached; it resumes when both limits
-permit it. The locally counted estimate is not SolarEdge's account-wide
-remaining balance, which can also be consumed by other applications. Token
-refresh credit cost is not verified.
-The scheduler checks
-eligibility every 60 seconds after a 60-second initial delay; these checks can
-be configured with `energy.scheduler-delay-ms` and
-`energy.scheduler-initial-delay-ms`. The polling interval and per-household
-budget are stored on the connection. Set `energy.global-safety-budget`
-(default 1500), `energy.billing-day` (default 1) and
-`energy.billing-timezone` (default UTC) to match the developer account's
-billing anniversary. The separate conservative rolling limit also applies.
-Compose passes the `ENERGY_*` values in `.env.example` to the backend;
-the defaults do not establish the actual provider billing cycle or balance.
+The scheduler checks every 60 seconds after a 60-second initial delay. Overview
+requests are eligible only from sunrise inclusive to sunset exclusive; no
+catch-up request is made after sunset. Token maintenance remains independent
+but is also restricted to daylight to prevent overnight provider requests.
+At four overview requests per daylight hour, a 30-day month with 12 hours of
+daylight per day would use roughly 1,440 overview credits; a 31-day month
+averaging 13 hours would use roughly 1,612. Actual counts vary with daylight,
+scheduler timing and failures. There is no longer a FamilyHub local credit hard
+stop: the prior 1,500-credit fields are retained for compatibility but ignored.
+The counted estimate is not the provider's remaining account balance, which
+can also be consumed by other applications. Token-refresh credit cost is not
+verified. Billing day and timezone determine reporting only and remain
+provisional until verified against the developer account.
 
 The first controlled staging collection on 31 October 2026 successfully
 refreshed credentials, stored one daily-cumulative site overview observation,
 and recorded one estimated overview credit. The stored period began at midnight
 in the configured site timezone. The deployed billing-cycle day `1` and
 timezone `UTC` are **provisional** until the developer account's actual billing
-anniversary and timezone are verified. The 1,500-credit FamilyHub limit is a
-local safety estimate, not the provider account's remaining balance. The API
+anniversary and timezone are verified. The API
 does not echo the overview's reporting period, so the stored bounds describe
 the requested period; they do not independently prove how the provider applied
 those bounds. SolarEdge `external_id` correlation succeeded in the controlled
@@ -113,8 +112,9 @@ An overview 403 blocks collection for that household until an administrator
 resolves permissions and clears the flag. A 429 pauses collection across
 FamilyHub connections until a valid `Retry-After` time; absent or malformed
 headers use exponential delays from one minute to one hour. The normal polling
-interval still applies. SolarEdge's documented quota-exhaustion response could
-not be verified, so neither status alone is treated as confirmed exhaustion.
+interval still applies. An explicit provider response identifying the monthly
+credit limit as reached is treated as a shared quota block requiring the
+administrative recovery procedure below; HTTP status alone is not enough.
 Refresh-token credit cost is also not verified: FamilyHub estimates one credit
 for each reserved overview, not an authoritative account balance.
 
@@ -154,7 +154,7 @@ bash scripts/household-backup-bundle.sh /path/outside/repository/familyhub-backu
 ```
 
 Record the previous frontend/backend image tags and Flyway version for rollback.
-Set the six documented `ENERGY_*` settings in the private `.env` as appropriate;
+Set the documented `ENERGY_*` settings in the private `.env` as appropriate;
 the account billing timezone and the site timezone are distinct. To avoid an
 unexpected request during initial checks, temporarily set
 `ENERGY_SCHEDULER_INITIAL_DELAY_MS=3600000` (one hour) before startup. If checks

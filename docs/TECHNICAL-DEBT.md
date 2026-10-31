@@ -8,7 +8,22 @@ This document tracks known technical debt, deferred improvements, and future enh
 
 ## High Priority (Address Soon)
 
-_No high priority items at this time._
+### Google Calendar reconnection deletes local state
+
+The existing OAuth callback replaces the token row on reconnect and deletes
+that member's selected-calendar associations and imported Google event rows.
+Google source events are not deleted, but a later import can lose FamilyHub-only
+audiences and recurring-occurrence overrides. Calendar selections must also be
+chosen again. Disconnect has a separate, intentionally destructive cleanup.
+
+Future work should enroll Google's verified, stable account identifier (`sub`),
+replace encrypted credentials in place, and preserve the connection ID,
+selected calendars, imported events and their local metadata during
+reauthorisation. Legacy connections have no stored verified identity and need
+an explicit, secure enrollment or recovery path. Do not infer account identity
+from editable member email addresses or access to a shared calendar. Preserve
+OAuth state validation, account isolation and the distinction between a
+temporary authentication failure and a genuine source-side deletion.
 
 ---
 
